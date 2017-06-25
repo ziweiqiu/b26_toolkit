@@ -17,6 +17,7 @@
 """
 
 import time
+import numpy as np
 from collections import deque
 
 from b26_toolkit.src.instruments import NI6259
@@ -24,12 +25,13 @@ from b26_toolkit.src.plotting.plots_1d import plot_counts
 from PyLabControl.src.core import Parameter, Script
 
 
-class Daq_Read_Counter(Script):
+class Daq_Read_Counter_Single(Script):
     """
-This script reads the Counter input from the DAQ and plots it.
+This script reads the Counter input from the DAQ and plots it (fixed number of samples).
     """
     _DEFAULT_SETTINGS = [
-        Parameter('integration_time', .25, float, 'Time per data point'),
+        Parameter('integration_time', 0.25, float, 'total time to collect counts for'),
+        Parameter('N_samps', 100, int, 'Number of samples for estimating error bar'),
         Parameter('counter_channel', 'ctr0', ['ctr0', 'ctr1'], 'Daq channel used for counter')
     ]
 
@@ -49,8 +51,7 @@ This script reads the Counter input from the DAQ and plots it.
         Script.__init__(self, name, settings=settings, scripts=scripts, instruments=instruments,
                         log_function=log_function, data_path=data_path)
 
-        self.data = {'counts': deque(), 'time': deque()}
-
+        self.data = {}
 
     def _function(self):
         """
@@ -58,56 +59,37 @@ This script reads the Counter input from the DAQ and plots it.
         will be overwritten in the __init__
         """
 
-        sample_rate = float(1) / self.settings['integration_time']
-        normalization = self.settings['integration_time']/.001
+        sample_num = self.settings['N_samps']
+
+        # initialize numpy arrays to store data:
+        self.data = {'counts': np.zeros(sample_num-1), 'time': np.zeros(sample_num-1)}
+
+        # normalization to get kcounts/sec:
+        normalization = self.settings['integration_time']/ sample_num / .001
+
+        # set sample rate:
+        sample_rate = sample_num / self.settings['integration_time']
         self.instruments['daq']['instance'].settings['digital_input'][self.settings['counter_channel']]['sample_rate'] = sample_rate
 
-        self.data = {'counts': deque(), 'time': deque()}
-
-        self.last_value = 0
-
-        sample_num = 2
-
-        task = self.instruments['daq']['instance'].setup_counter("ctr0", sample_num, continuous_acquisition=True)
-
-        # start counter and scanning sequence
+        # start counter acquisiotion:
+        task = self.instruments['daq']['instance'].setup_counter("ctr0", sample_num, continuous_acquisition=False)
         self.instruments['daq']['instance'].run(task)
+        raw_data, num_read = self.instruments['daq']['instance'].read(task)
 
-        # starting point for keeping track of time in seconds:
-        start_time = time.time()
-        while True:
-            if self._abort:
-                break
+        # parse cumulative counter into a numpy array of counts collected in subsequent windows:
+        self.data['counts'] = np.array([raw_data[i+1]-raw_data[i] for i in range(len(raw_data)-1)])/normalization
 
+        # create time vector:
+        self.data['time'] = np.arange(0,len(raw_data)-1)/sample_rate
 
-
-            # TODO: this is currently a nonblocking read so we add a time.sleep at the end so it doesn't read faster
-            # than it acquires, this should be replaced with a blocking read in the future
-            raw_data, num_read = self.instruments['daq']['instance'].read(task)
-            #skip first read, which gives an anomolous value
-            if num_read.value == 1:
-                self.last_value = raw_data[0] #update running value to last measured value to prevent count spikes
-                time.sleep(2.0 / sample_rate)
-                continue
-            print('raw data length: ', len(raw_data))
-            self.data['time'].append(time.time() - start_time)
-            self.data['time'].append(self.data['time'][-1] + 1 / sample_rate)
-            for value in raw_data:
-                self.data['counts'].append(((float(value) - self.last_value) / normalization))
-                self.last_value = value
-
-
-            self.progress = 50.
-            self.updateProgress.emit(int(self.progress))
-
-            time.sleep(2.0 / sample_rate)
+        time.sleep(2.0 / sample_rate)
 
         # clean up APD tasks
         self.instruments['daq']['instance'].stop(task)
 
     def plot(self, figure_list):
         # COMMENT_ME
-        super(Daq_Read_Counter, self).plot([figure_list[1]])
+        super(Daq_Read_Counter_Single, self).plot([figure_list[1]])
 
     def _plot(self, axes_list, data = None):
         # COMMENT_ME
@@ -117,6 +99,8 @@ This script reads the Counter input from the DAQ and plots it.
 
         if data:
             plot_counts(axes_list[0], data['counts'], data['time'],'time [sec]')
+
+
 
 if __name__ == '__main__':
     script = {}

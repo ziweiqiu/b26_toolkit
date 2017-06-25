@@ -22,52 +22,42 @@ except Exception:
     pass
 
 from galvo_scan_v2 import GalvoScan
+from confocal_scan_CN041 import ConfocalScan
 from set_laser import SetLaser
 from daq_read_counter import Daq_Read_Counter
+from daq_read_counter_single_CN041 import Daq_Read_Counter_Single
 from esr import ESR
 from esr_two_freq_continuous import ESRTwoFreqContinuous
-# from keysight_get_spectrum import KeysightGetSpectrum
-
-# from labview_fpga_get_timetrace import LabviewFpgaTimetrace
-from ni_fpga_polarization_controller import FPGA_BalancePolarization, FPGA_CalibrateDetector, FPGA_BalancePolarizationAndActivateFB
-
-from zi_sweeper import ZISweeper
-from zi_high_res_sweep import ZISweeperHighResolution
-
 from find_nv import FindNV
-
-from atto_scan import AttoStep
-
 from pulse_blaster_scripts import XY8, T1, Rabi, CalibrateMeasurementWindow, PDD, XY4, T1SpinFlip, PulsedESR,PulsedESRSlow, Rabi_double_init, HahnEcho_double_init
 from esr_and_rabi import ESRAndRabi
-from keysight_get_spectrum import KeysightGetSpectrum
-
 from pulse_delays import PulseDelays
-
-from light_control import ApplyLightControlSettings, CameraOn
-
 from correlate_images import Track_Correlate_Images, Take_And_Correlate_Images
 
+
+# from keysight_get_spectrum import KeysightGetSpectrum
+# from labview_fpga_get_timetrace import LabviewFpgaTimetrace
+# from ni_fpga_polarization_controller import FPGA_BalancePolarization, FPGA_CalibrateDetector, FPGA_BalancePolarizationAndActivateFB
+# from zi_sweeper import ZISweeper
+# from zi_high_res_sweep import ZISweeperHighResolution
+# from atto_scan import AttoStep
+# from keysight_get_spectrum import KeysightGetSpectrum
+# from light_control import ApplyLightControlSettings, CameraOn
 # from ni_fpga_galvo_scan import FPGA_GalvoScan
-
-from autofocus import AutoFocusDAQ, AutoFocusTwoPoints, AutoFocusDaqSMC, AutoFocusTwoPointsFR
-
-from ni_fpga_galvo_scan import FPGA_GalvoScan
-
-from record_pressures import RecordPressures
-
-from set_magnetic_coils import SetMagneticCoils
-
-from align_magnetic_field_to_NV import AlignFieldToNV
-
-from Ni_9263_polarization_controller import Ni9263_BalancePolarization
-
-from stability_with_microwaves import Stability_With_Microwaves
+# from autofocus import AutoFocusDAQ, AutoFocusTwoPoints, AutoFocusDaqSMC, AutoFocusTwoPointsFR
+# from ni_fpga_galvo_scan import FPGA_GalvoScan
+# from record_pressures import RecordPressures
+# from set_magnetic_coils import SetMagneticCoils
+# from align_magnetic_field_to_NV import AlignFieldToNV
+# from Ni_9263_polarization_controller import Ni9263_BalancePolarization
+# from stability_with_microwaves import Stability_With_Microwaves
 #
 # from ni_fpga_polarization_controller import FPGA_PolarizationSignalMap,\
 #     FPGA_PolarizationSignalScan, FPGA_BalancePolarization
+# from read_temperature_lakeshore import ReadTemperatureLakeshore
 
-from read_temperature_lakeshore import ReadTemperatureLakeshore
+
+
 # old imports with try/except
 # verbose = False
 

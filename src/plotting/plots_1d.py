@@ -232,13 +232,22 @@ def update_pulse_plot(axis, pulse_collection, pulse_colors=None):
             axis.set_xlabel('time [us]')
 
 
-def plot_counts(axis, data):
+def plot_counts(axis, data, xvar=None, varlbl=None):
     # COMMENT_ME
-    axis.plot(data)
-    axis.hold(False)
 
-    axis.set_xlabel('time')
+    countsmean = np.mean(data)
+    countserr = np.std(data)/(len(data)**(0.5))
+    if xvar==None:
+        axis.plot(data)
+        axis.set_xlabel('index')
+    else:
+        axis.plot(xvar, data)
+        if not (varlbl==None):
+            axis.set_xlabel(varlbl)
+
+    axis.hold(False)
     axis.set_ylabel('kCounts/sec')
+    axis.set_title('mean count rate = ' + str(round(countsmean*10)/10) + '$\pm$' + str(round(countserr*10)/10) + ' kCounts/sec')
 
 
 def plot_temperature(axis, data, sample_rate):

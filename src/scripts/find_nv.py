@@ -26,7 +26,6 @@ from b26_toolkit.src.plotting.plots_2d import plot_fluorescence_new
 from PyLabControl.src.core import Script, Parameter
 from b26_toolkit.src.scripts import GalvoScan, SetLaser
 
-
 class FindNV(Script):
     """
 GalvoScan uses the apd, daq, and galvo to sweep across voltages while counting photons at each voltage,

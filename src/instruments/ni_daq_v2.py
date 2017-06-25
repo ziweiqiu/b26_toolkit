@@ -113,7 +113,7 @@ class DAQ(Instrument):
     _DEFAULT_SETTINGS = Parameter([
         Parameter('device', 'Dev1', (str), 'Name of DAQ device'),
         Parameter('override_buffer_size', -1, int, 'Buffer size for manual override (unused if -1)'),
-        Parameter('ao_read_offset', .005, float, 'Empirically determined offset for reading ao voltages internally'),
+        Parameter('ao_read_offset', .003, float, 'Empirically determined offset for reading ao voltages internally'),
         Parameter('analog_output',
                   [
                       Parameter('ao0',
@@ -864,7 +864,7 @@ class NI6259(DAQ):
     _DEFAULT_SETTINGS = Parameter([
         Parameter('device', 'Dev1', (str), 'Name of DAQ device'),
         Parameter('override_buffer_size', -1, int, 'Buffer size for manual override (unused if -1)'),
-        Parameter('ao_read_offset', .005, float, 'Empirically determined offset for reading ao voltages internally'),
+        Parameter('ao_read_offset', .003, float, 'Empirically determined offset for reading ao voltages internally'),
         Parameter('analog_output',
                   [
                       Parameter('ao0',
@@ -1039,7 +1039,7 @@ class NI9402(DAQ):
         Parameter('device', 'cDAQ9188-1BFB6F2', ['cDAQ9188-1BFB6F2', 'cDAQ9184-1BA7633'], 'Name of DAQ device - check in NiMax'),
         Parameter('module', 'Mod2', ['Mod1', 'Mod2', 'Mod3', 'Mod4', 'Mod5', 'Mod6', 'Mod7', 'Mod8']),
         Parameter('override_buffer_size', -1, int, 'Buffer size for manual override (unused if -1)'),
-        Parameter('ao_read_offset', .005, float, 'Empirically determined offset for reading ao voltages internally'),
+        Parameter('ao_read_offset', .00, float, 'Empirically determined offset for reading ao voltages internally'),
         Parameter('digital_input',
                   [
                       Parameter('ctr0',
