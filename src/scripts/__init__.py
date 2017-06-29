@@ -24,12 +24,15 @@ except Exception:
 from galvo_scan_v2 import GalvoScan
 from confocal_scan_CN041 import ConfocalScan
 from set_laser import SetLaser
+from set_confocal_CN041 import SetConfocal
+from optimize_z_CN041 import optimizeZ
 from daq_read_counter import Daq_Read_Counter
 from daq_read_counter_single_CN041 import Daq_Read_Counter_Single
 from esr import ESR
 from esr_two_freq_continuous import ESRTwoFreqContinuous
 from find_nv import FindNV
-from pulse_blaster_scripts import XY8, T1, Rabi, CalibrateMeasurementWindow, PDD, XY4, T1SpinFlip, PulsedESR,PulsedESRSlow, Rabi_double_init, HahnEcho_double_init
+# from pulse_blaster_scripts import XY8, T1, Rabi, CalibrateMeasurementWindow, PDD, XY4, T1SpinFlip, PulsedESR,PulsedESRSlow, Rabi_double_init, HahnEcho_double_init
+from pulse_blaster_scripts_CN041 import Rabi
 from esr_and_rabi import ESRAndRabi
 from pulse_delays import PulseDelays
 from correlate_images import Track_Correlate_Images, Take_And_Correlate_Images

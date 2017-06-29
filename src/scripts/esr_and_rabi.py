@@ -17,7 +17,8 @@
 """
 
 from PyLabControl.src.core import Script
-from b26_toolkit.src.scripts import ESR, Rabi
+from b26_toolkit.src.scripts import ESR
+from b26_toolkit.src.scripts.pulse_blaster_scripts_CN041 import Rabi
 
 
 class ESRAndRabi(Script):
@@ -58,5 +59,4 @@ class ESRAndRabi(Script):
                 self.scripts['rabi'].run()
         else:
             self.log('No resonance frequency found skipping rabi attempt')
-
 

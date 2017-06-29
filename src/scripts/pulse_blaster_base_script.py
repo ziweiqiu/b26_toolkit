@@ -22,7 +22,7 @@ from copy import deepcopy
 import numpy as np
 
 from b26_toolkit.src.scripts import FindNV
-from b26_toolkit.src.instruments import NI6259, B26PulseBlaster, Pulse
+from b26_toolkit.src.instruments import NI6259, CN041PulseBlaster, Pulse
 from b26_toolkit.src.plotting.plots_1d import plot_1d_simple_timetrace_ns, plot_pulses, update_pulse_plot, update_1d_simple
 from PyLabControl.src.core.scripts import Script, Parameter
 import random
@@ -50,7 +50,7 @@ for a given experiment
 
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster}
 
     _SCRIPTS = {'find_nv': FindNV}
 
@@ -344,6 +344,8 @@ for a given experiment
             if not 'mw_switch_extra_time' in self.settings.keys():
                 #default to a 40 ns buffer
                 mw_switch_time = 40
+            else:
+                mw_switch_time = self.settings['mw_switch_extra_time']
             for sequence in pulse_sequences:
                 mw_switch_pulses = []
                 # add a switch pulse for each microwave pulse
@@ -377,9 +379,9 @@ for a given experiment
         self.pulse_sequences = add_mw_switch_to_sequences(self.pulse_sequences) #UNCOMMENT TO ADD SWITCH
         failure_list = []
         for pulse_sequence in self.pulse_sequences:
-            overlapping_pulses = B26PulseBlaster.find_overlapping_pulses(pulse_sequence)
+            overlapping_pulses = CN041PulseBlaster.find_overlapping_pulses(pulse_sequence)
             if not overlapping_pulses == []:
-                failure_list.append(B26PulseBlaster.find_overlapping_pulses(pulse_sequence))
+                failure_list.append(CN041PulseBlaster.find_overlapping_pulses(pulse_sequence))
                 break
             for pulse in pulse_sequence:
                 assert pulse.start_time == 0 or pulse.start_time > 1, \

@@ -47,6 +47,7 @@ class GalvoScan(Script):
         Parameter('DAQ_channels',
                    [Parameter('x_ao_channel', 'ao0', ['ao0', 'ao1', 'ao2', 'ao3'], 'Daq channel used for x voltage analog output'),
                     Parameter('y_ao_channel', 'ao1', ['ao0', 'ao1', 'ao2', 'ao3'], 'Daq channel used for y voltage analog output'),
+                    Parameter('z_ao_channel', 'ao2', ['ao0', 'ao1', 'ao2', 'ao3'], 'Daq channel used for z voltage analog output'),
                     Parameter('counter_channel', 'ctr0', ['ctr0', 'ctr1', 'ctr2', 'ctr3'], 'Daq channel used for counter')
                   ]),
         Parameter('ending_behavior', 'return_to_start', ['return_to_start', 'return_to_origin', 'leave_at_corner'], 'return to the corn'),
@@ -109,6 +110,8 @@ class GalvoScan(Script):
                 self.settings['DAQ_channels']['x_ao_channel']]['sample_rate'] = sample_rate
             self.daq_out.settings['analog_output'][
                 self.settings['DAQ_channels']['y_ao_channel']]['sample_rate'] = sample_rate
+            self.daq_out.settings['analog_output'][
+                self.settings['DAQ_channels']['z_ao_channel']]['sample_rate'] = sample_rate
             self.daq_in.settings['digital_input'][
                 self.settings['DAQ_channels']['counter_channel']]['sample_rate'] = sample_rate
             self.data = {'image_data': np.zeros((self.settings['num_points']['y'], self.settings['num_points']['x'])),
@@ -188,8 +191,8 @@ class GalvoScan(Script):
         sets the current position of the galvo
         galvo_position: list with two floats, which give the x and y position of the galvo mirror
         """
-        if galvo_position[0] > 1 or galvo_position[0] < -1 or galvo_position[1] > 1 or galvo_position[1] < -1:
-            raise ValueError('The script attempted to set the galvo position to an illegal position outside of +- 1 V')
+        if galvo_position[0] > 10 or galvo_position[0] < -10 or galvo_position[1] > 10 or galvo_position[1] < -10:
+            raise ValueError('The script attempted to set the galvo position to an illegal position outside of +- 10 V')
 
         pt = galvo_position
         # daq API only accepts either one point and one channel or multiple points and multiple channels

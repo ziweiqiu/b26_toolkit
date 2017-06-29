@@ -61,6 +61,16 @@ class PulseBlaster(Instrument):
             Parameter('status', False, bool, 'True if voltage is high to the microwave switch, false otherwise'),
             Parameter('delay_time', 0.2, float, 'delay time between pulse sending time and microwave switch [ns]')
         ]),
+        Parameter('output_5', [
+            Parameter('channel', 4, int, 'channel to which the microwave switch is connected to'),
+            Parameter('status', False, bool, 'True if voltage is high to the microwave switch, false otherwise'),
+            Parameter('delay_time', 0.2, float, 'delay time between pulse sending time and microwave switch [ns]')
+        ]),
+        Parameter('output_7', [
+            Parameter('channel', 4, int, 'channel to which the trig signal is connected to'),
+            Parameter('status', False, bool, 'True if voltage is high to the microwave switch, false otherwise'),
+            Parameter('delay_time', 0.2, float, 'delay time between pulse sending time and microwave switch [ns]')
+        ]),
         Parameter('clock_speed', 400, [100, 400], 'Clock speed of the pulse blaster [MHz]')
     ])
 
@@ -80,6 +90,7 @@ class PulseBlaster(Instrument):
     def __init__(self, name=None, settings=None):
         try:
             dll_path = get_config_value('PULSEBLASTER_DLL_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.txt'))
+            print('AB20170628: pulse blaster dll path:', os.path.join(os.path.dirname(os.path.abspath(__file__))))
         except IOError:
             warnings.warn("NI Pulseblaster DLL not found. If it should be present, check the path:")
             dll_path = None
@@ -95,6 +106,8 @@ class PulseBlaster(Instrument):
         self.estimated_runtime = None
         self.sequence_start_time = None
 
+        print('AB20170628: pulse blaster __init__ executed')
+
     def update(self, settings):
         # call the update_parameter_list to update the parameter list
         super(PulseBlaster, self).update(settings)
@@ -109,9 +122,11 @@ class PulseBlaster(Instrument):
             self.pb.pb_stop_programming()
             self.pb.pb_start()
             assert self.pb.pb_read_status() & 0b100 == 0b100, 'pulseblaster did not begin running after start() called.'
-            self.pb.pb_stop()
+            # self.pb.pb_stop()
             self.pb.pb_close()
             break
+
+        print('AB20170628: pulse blaster updated')
 
     def settings2bits(self):
         #COMMENT_ME
@@ -472,6 +487,8 @@ class PulseBlaster(Instrument):
             assert return_value >=0, 'There was an error while programming the pulseblaster'
         self.pb.pb_stop_programming()
 
+        print('AB20170628: pulse blaster programmed')
+
     def start_pulse_seq(self):
         """
         Starts the pulse sequence programmed in program_pb, and confirms that the pulseblaster is running.
@@ -484,6 +501,8 @@ class PulseBlaster(Instrument):
         assert self.pb.pb_read_status() & 0b100 == 0b100, 'pulseblaster did not begin running after start() called.'
         self.pb.pb_close()
         self.sequence_start_time = datetime.datetime.now()
+
+        print('AB20170628: pulse blaster started', self.pb)
 
     def wait(self):
         #COMMENT_ME
@@ -582,6 +601,92 @@ if __name__ == '__main__':
 
     #pb = Script.load_and_append() #B26PulseBlaster()
     inst, failed = Instrument.load_and_append({'B26PulseBlaster': B26PulseBlaster})
+
+    # for i in range(5):
+    #     pulse_collection = [Pulse(channel_id=1, start_time=0, duration=2000),
+    #                         Pulse(channel_id=1, start_time=2000, duration=2000),
+    #                         Pulse(channel_id=1, start_time=4000, duration=2000),
+    #                         Pulse(channel_id=0, start_time=6000, duration=2000)]
+    #     # pulse_collection = [Pulse('apd_readout', i, 100) for i in range(0, 2000, 200)]
+    #     pb.program_pb(pulse_collection, num_loops=5E5)
+    #     pb.start_pulse_seq()
+    #     pb.wait()
+    #     print 'finished #{0}!'.format(i)
+
+    #   pb.update({'laser': {'status': True}})
+
+
+class CN041PulseBlaster(PulseBlaster):
+    # COMMENT_ME
+    _DEFAULT_SETTINGS = Parameter([
+        Parameter('apd_readout', [
+            Parameter('channel', 0, int, 'channel to which the daq is connected to'),
+            Parameter('status', False, bool, 'True if voltage is high to the daq, false otherwise'),
+            Parameter('delay_time', 0, float, 'delay time between pulse sending time and daq acknowledgement [ns]')
+        ]),
+        Parameter('RF_switch', [
+            Parameter('channel', 1, int, 'channel to which the RF switch is connected to'),
+            Parameter('status', True, bool, 'True if voltage is high to the RF switch, false otherwise'),
+            Parameter('delay_time', 0, float, 'delay time between pulse sending time and RF switch [ns]')
+        ]),
+
+        Parameter('microwave_i', [
+            Parameter('channel', 2, int, 'channel to which the the microwave p trigger is connected to'),
+            Parameter('status', False, bool, 'True if voltage is high to the microwave p trigger, false otherwise'),
+            Parameter('delay_time', 0, float, 'delay time between pulse sending time and microwave p trigger [ns]')
+        ]),
+        Parameter('microwave_q', [
+            Parameter('channel', 3, int, 'channel to which the the microwave q trigger is connected to'),
+            Parameter('status', False, bool, 'True if voltage is high to the microwave q trigger, false otherwise'),
+            Parameter('delay_time', 0, float, 'delay time between pulse sending time and microwave q trigger [ns]')
+        ]),
+
+        Parameter('laser', [
+            Parameter('channel', 4, int, 'channel to which laser is connected'),
+            Parameter('status', True, bool, 'True if voltage is high to the laser, false otherwise'),
+            Parameter('delay_time', 470, float, 'delay time between pulse sending time and laser switch on [ns] (measured as 470ns)')
+        ]),
+        Parameter('microwave_switch', [
+            Parameter('channel', 5, int, 'channel to which the microwave switch is connected to'),
+            Parameter('status', True, bool, 'True if voltage is high to the microwave switch, false otherwise'),
+            Parameter('delay_time', 0, float, 'delay time between pulse sending time and microwave switch [ns]')
+        ]),
+        Parameter('trig_channel', [
+            Parameter('channel', 7, int, 'trigger sequence channel - pulse at the beginning of pulse sequence'),
+            Parameter('status', False, bool, 'True if voltage is high to the off-channel, false otherwise'),
+            Parameter('delay_time', 0, float, 'delay time between pulse sending time and off channel on [ns]')
+        ]),
+        Parameter('clock_speed', 400, [100, 400], 'Clock speed of the pulse blaster [MHz]')
+    ])
+
+    _PROBES = {}
+
+    def __init__(self, name=None, settings=None):
+        #COMMENT_ME
+        super(CN041PulseBlaster, self).__init__(name, settings)
+
+
+    def update(self, settings):
+        # call the update_parameter_list to update the parameter list
+        # oh god this is confusing
+        super(CN041PulseBlaster, self).update(settings)
+
+    def read_probes(self, key):
+        pass
+
+    def get_name(self, channel):
+        #COMMENT_ME
+        for key, value in self.settings:
+            if 'channel' in value.keys() and value['channel'] == channel:
+                return key
+
+        raise AttributeError('Could not find instrument name attached to channel {s}'.format(channel))
+
+
+if __name__ == '__main__':
+
+    #pb = Script.load_and_append() #CN041PulseBlaster()
+    inst, failed = Instrument.load_and_append({'CN041PulseBlaster': CN041PulseBlaster})
 
     # for i in range(5):
     #     pulse_collection = [Pulse(channel_id=1, start_time=0, duration=2000),

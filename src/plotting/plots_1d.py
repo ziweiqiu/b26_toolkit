@@ -237,17 +237,19 @@ def plot_counts(axis, data, xvar=None, varlbl=None):
 
     countsmean = np.mean(data)
     countserr = np.std(data)/(len(data)**(0.5))
+    countsmax = np.amax(data)
     if xvar==None:
         axis.plot(data)
         axis.set_xlabel('index')
     else:
         axis.plot(xvar, data)
+        xmax = xvar[np.argmax(data)]
         if not (varlbl==None):
-            axis.set_xlabel(varlbl)
+            axis.set_xlabel(varlbl + ' max at ' + str(round(xmax*1000)/1000))
 
     axis.hold(False)
     axis.set_ylabel('kCounts/sec')
-    axis.set_title('mean count rate = ' + str(round(countsmean*10)/10) + '$\pm$' + str(round(countserr*10)/10) + ' kCounts/sec')
+    axis.set_title('max counts = ' + str(round(countsmax*10)/10) + '; mean counts = ' + str(round(countsmean*10)/10) + '$\pm$' + str(round(countserr*10)/10) + ' [kCounts/sec]')
 
 
 def plot_temperature(axis, data, sample_rate):

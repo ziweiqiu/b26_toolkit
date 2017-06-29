@@ -46,7 +46,12 @@ class ESR(Script):
         Parameter('turn_off_after', False, bool, 'if true MW output is turned off after the measurement'),
         Parameter('take_ref', True, bool, 'If true normalize each frequency sweep by the average counts. This should be renamed at some point because now we dont take additional data for the reference.'),
         Parameter('save_full_esr', True, bool, 'If true save all the esr traces individually'),
-        Parameter('daq_type', 'PCI', ['PCI', 'cDAQ'], 'Type of daq to use for scan')
+        Parameter('daq_type', 'PCI', ['PCI', 'cDAQ'], 'Type of daq to use for scan'),
+        Parameter('DAQ_channels',
+                   [Parameter('ao_sweep_channel', 'ao3', ['ao0', 'ao1', 'ao2', 'ao3'],
+                             'Daq channel used for SRS generator sweeps (frequency/power)'),
+                   Parameter('counter_channel', 'ctr0', ['ctr0', 'ctr1', 'ctr2', 'ctr3'],
+                             'Daq channel used for counter')])
     ]
 
     _INSTRUMENTS = {
@@ -125,7 +130,7 @@ class ESR(Script):
             time.sleep(self.settings['mw_generator_switching_time'])
 
             ctrtask = self.daq_in.setup_counter("ctr0", len(freq_voltage_array) + 1)
-            aotask = self.daq_out.setup_AO(["ao2"], freq_voltage_array)
+            aotask = self.daq_out.setup_AO(["ao3"], freq_voltage_array)
 
             # start counter and scanning sequence
             self.daq_in.run(ctrtask)
@@ -185,10 +190,11 @@ class ESR(Script):
         self.instruments['microwave_generator']['instance'].update({'amplitude': self.settings['power_out']})
         self.instruments['microwave_generator']['instance'].update({'modulation_type': 'FM'})
         self.instruments['microwave_generator']['instance'].update({'dev_width': 3.2E7})
+        self.instruments['microwave_generator']['instance'].update({'modulation_function': 'External'})
         self.instruments['microwave_generator']['instance'].update({'enable_modulation': True})
 
         sample_rate = float(1) / self.settings['settle_time']
-        self.daq_out.settings['analog_output']['ao2']['sample_rate'] = sample_rate
+        self.daq_out.settings['analog_output']['ao3']['sample_rate'] = sample_rate
         self.daq_in.settings['digital_input']['ctr0']['sample_rate'] = sample_rate
 
         self.instruments['microwave_generator']['instance'].update({'enable_output': True})
@@ -222,9 +228,9 @@ class ESR(Script):
 
 
             avrg_counts[scan_num] = np.mean(esr_data[scan_num])
-            print('JG20170615 avrg counts',scan_num, avrg_counts[scan_num] )
-            print('JG20170515 shape of esr daagta', np.shape(esr_data[0:(scan_num + 1)]))
-            print('JG20170515 len(freq_values)', len(freq_values))
+            # print('JG20170615 avrg counts',scan_num, avrg_counts[scan_num] )
+            # print('JG20170515 shape of esr daagta', np.shape(esr_data[0:(scan_num + 1)]))
+            # print('JG20170515 len(freq_values)', len(freq_values))
 
             if take_ref is True:
                 esr_data[scan_num] /=avrg_counts[scan_num]

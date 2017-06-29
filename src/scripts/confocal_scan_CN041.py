@@ -31,14 +31,14 @@ class ConfocalScan(Script):
     _DEFAULT_SETTINGS = [
         Parameter('scan_axes', 'xy', ['xy','xz','yz','x','y','z'],'Choose 2D or 1D confocal scan to perform'),
         Parameter('point_a',
-                  [Parameter('x', 0, float, 'x-coordinate [$\mu$m]'),
-                   Parameter('y', 0, float, 'y-coordinate [$\mu$m]'),
-                   Parameter('z', 5, float, 'z-coordinate [$\mu$m]')
+                  [Parameter('x', 0, float, 'x-coordinate [V]'),
+                   Parameter('y', 0, float, 'y-coordinate [V]'),
+                   Parameter('z', 5, float, 'z-coordinate [V]')
                    ]),
         Parameter('point_b',
-                  [Parameter('x', 10.0, float, 'x-coordinate'),
-                   Parameter('y', 10.0, float, 'y-coordinate'),
-                   Parameter('z', 10.0, float, 'z-coordinate')
+                  [Parameter('x', 10.0, float, 'x-coordinate [V]'),
+                   Parameter('y', 10.0, float, 'y-coordinate [V]'),
+                   Parameter('z', 10.0, float, 'z-coordinate [V]')
                    ]),
         Parameter('RoI_mode', 'center', ['corner', 'center'], 'mode to calculate region of interest.\n \
                                                            corner: pta and ptb are diagonal corners of rectangle.\n \
@@ -159,10 +159,13 @@ class ConfocalScan(Script):
 
                 summedData = np.zeros(len(self.var1_array) / self.clockAdjust)
                 for i in range(0, int((len(self.var1_array) / self.clockAdjust))):
-                    summedData[i] = np.sum(
-                        diffData[(i * self.clockAdjust + 1):(i * self.clockAdjust + self.clockAdjust - 1)])
+                    pxarray = diffData[(i * self.clockAdjust + 1):(i * self.clockAdjust + self.clockAdjust - 1)]
+                    normalization = len(pxarray) / self.sample_rate / 0.001
+                    summedData[i] = np.sum(pxarray)/normalization
+
                 # also normalizing to kcounts/sec
-                self.data['image_data'][var2Num] = summedData * (.001 / self.settings['time_per_pt']['galvo'])
+                # self.data['image_data'][var2Num] = summedData * (.001 / self.settings['time_per_pt']['galvo'])
+                self.data['image_data'][var2Num] = summedData
 
                 self.progress = float(var2Num + 1) / len(self.var2_array) * 100
                 self.updateProgress.emit(int(self.progress))
@@ -202,10 +205,13 @@ class ConfocalScan(Script):
 
                 summedData = np.zeros(len(self.var1_array) / self.clockAdjust)
                 for i in range(0, int((len(self.var1_array) / self.clockAdjust))):
-                    summedData[i] = np.sum(
-                        diffData[(i * self.clockAdjust + 1):(i * self.clockAdjust + self.clockAdjust - 1)])
+                    pxarray = diffData[(i * self.clockAdjust + 1):(i * self.clockAdjust + self.clockAdjust - 1)]
+                    normalization = len(pxarray) / self.sample_rate / 0.001
+                    summedData[i] = np.sum(pxarray)/normalization
                 # also normalizing to kcounts/sec
-                self.data['image_data'] = summedData * (.001 / self.settings['time_per_pt']['galvo'])
+                # self.data['image_data'] = summedData * (.001 / self.settings['time_per_pt']['galvo'])
+
+                self.data['image_data'] = summedData
 
                 self.progress = 50.
                 self.updateProgress.emit(int(self.progress))
@@ -241,7 +247,9 @@ class ConfocalScan(Script):
                 diffData = np.diff(samparray)
 
                 # sum and normalize to kcounts/sec
-                self.data['image_data'][var1Num] = np.sum(diffData) * (.001 / self.settings['time_per_pt']['z-piezo'])
+                # self.data['image_data'][var1Num] = np.sum(diffData) * (.001 / self.settings['time_per_pt']['z-piezo'])
+                normalization = len(diffData) / self.sample_rate / 0.001
+                self.data['image_data'][var1Num] = np.sum(diffData) / normalization
 
                 self.progress = float(var1Num + 1) / len(self.var1_array) * 100
                 self.updateProgress.emit(int(self.progress))
