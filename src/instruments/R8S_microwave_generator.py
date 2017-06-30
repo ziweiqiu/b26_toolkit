@@ -21,9 +21,9 @@ import pyvisa.errors
 
 from PyLabControl.src.core import Parameter, Instrument
 
-# RANGE_MIN = 2025000000 #2.025 GHz
-RANGE_MIN = 1012500000
-RANGE_MAX = 4050000000 #4.050 GHZ
+# RANGE_MIN = 2025000000 # 9 kHz
+RANGE_MIN = 9000
+RANGE_MAX = 3200000000  #3.2 GHZ
 
 class R8SMicrowaveGenerator(Instrument):
     """
@@ -31,36 +31,19 @@ class R8SMicrowaveGenerator(Instrument):
     device over USB using pyvisa.
     """
 
-    # _DEFAULT_SETTINGS = Parameter([
-    #     Parameter('connection_type', 'USB', ['GPIB', 'RS232','USB'], 'type of connection to open to controller'),
-    #     Parameter('port', 27, range(0,31), 'GPIB or COM port on which to connect'),
-    #     Parameter('GPIB_num', 0, int, 'GPIB device on which to connect'),
-    #     Parameter('enable_output', False, bool, 'Type-N output enabled'),
-    #     Parameter('frequency', 3e9, float, 'frequency in Hz, or with label in other units ex 300 MHz'),
-    #     Parameter('amplitude', -60, float, 'Type-N amplitude in dBm'),
-    #     Parameter('phase', 0, float, 'output phase'),
-    #     Parameter('enable_modulation', True, bool, 'enable modulation'),
-    #     Parameter('modulation_type', 'FM', ['AM', 'FM', 'PhaseM', 'Freq sweep', 'Pulse', 'Blank', 'IQ'],
-    #               'Modulation Type: 0= AM, 1=FM, 2= PhaseM, 3= Freq sweep, 4= Pulse, 5 = Blank, 6=IQ'),
-    #     Parameter('modulation_function', 'External', ['Sine', 'Ramp', 'Triangle', 'Square', 'Noise', 'External'],
-    #               'Modulation Function: 0=Sine, 1=Ramp, 2=Triangle, 3=Square, 4=Noise, 5=External'),
-    #     Parameter('pulse_modulation_function', 'External', ['Square', 'Noise(PRBS)', 'External'], 'Pulse Modulation Function: 3=Square, 4=Noise(PRBS), 5=External'),
-    #     Parameter('dev_width', 32e6, float, 'Width of deviation from center frequency in FM')
-    # ])
-
     _DEFAULT_SETTINGS = Parameter([
         Parameter('connection_type', 'USB', ['USB'], 'type of connection to open to controller'),
         Parameter('enable_output', False, bool, 'Type-N output enabled'),
         Parameter('freq_mode','CW',['CW','Sweep'],'select the frequency mode'),
         Parameter('power_mode', 'CW', ['CW','Sweep'], 'select the power mode'),
         Parameter('edge', 'Positive', ['Positive', 'Negative'], 'select the triggerring edge'),
-        Parameter('frequency', 3e9, float, 'frequency in Hz, or with label in other units ex 300 MHz'),
-        Parameter('freq_start', 2.5e9, float, 'start frequency in Hz in sweep mode'),
-        Parameter('freq_stop', 3.2e9, float, 'stop frequency in Hz in sweep mode'),
-        Parameter('freq_pts', 10, float, 'number of sweep steps in freq sweep mode'),
-        Parameter('power', -20, float, 'Type-N amplitude in dBm'),
+        Parameter('frequency', 252e6, float, 'frequency in Hz, or with label in other units ex 300 MHz'),
+        Parameter('freq_start', 100e6, float, 'start frequency in Hz in sweep mode'),
+        Parameter('freq_stop', 400e6, float, 'stop frequency in Hz in sweep mode'),
+        Parameter('freq_pts', 100, float, 'number of sweep steps in freq sweep mode'),
+        Parameter('power', -45, float, 'Type-N amplitude in dBm'),
         Parameter('pwr_start', -20, float, 'start power in dBm in sweep mode'),
-        Parameter('pwr_stop', 20, float, 'stop power in dBm in sweep mode'),
+        Parameter('pwr_stop', 0, float, 'stop power in dBm in sweep mode'),
         Parameter('pwr_pts', 20, float, 'number of sweep steps in power sweep mode')
     ])
 
@@ -116,7 +99,7 @@ class R8SMicrowaveGenerator(Instrument):
                     value = self._output_to_internal(value)
                 elif key == 'frequency':
                     if value > RANGE_MAX or value < RANGE_MIN:
-                        raise ValueError("Invalid frequency. All frequencies must be between 2.025 GHz and 4.050 GHz.")
+                        raise ValueError("Invalid frequency. All frequencies must be between 9kHz and 3.2 GHz.")
                 elif key == 'freq_mode':
                     self.srs.write('SOUR:SWE:FREQ:MODE STEP')
                     self.srs.write('SOUR:SWE:FREQ:SPAC LIN')

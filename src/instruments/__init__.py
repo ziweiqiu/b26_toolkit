@@ -25,6 +25,7 @@ from pulse_blaster import CN041PulseBlaster, Pulse
 # from maestro import MaestroLightControl
 # from attocube import Attocube
 from microwave_generator import MicrowaveGenerator
+from R8S_microwave_generator import R8SMicrowaveGenerator
 # from magnet_coils import MagnetCoils
 # from temperature_controller import TemperatureController
 # from montana import CryoStation

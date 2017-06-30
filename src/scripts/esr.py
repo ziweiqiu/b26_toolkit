@@ -20,7 +20,7 @@ from PyLabControl.src.core import Script, Parameter
 
 # import standard libraries
 import numpy as np
-from b26_toolkit.src.instruments import MicrowaveGenerator, NI6259, NI9263, NI9402
+from b26_toolkit.src.instruments import MicrowaveGenerator, R8SMicrowaveGenerator, CN041PulseBlaster, NI6259, NI9263, NI9402
 from collections import deque
 
 from b26_toolkit.src.plotting.plots_1d import plot_esr
@@ -43,7 +43,8 @@ class ESR(Script):
         Parameter('integration_time', 0.01, float, 'measurement time of fluorescent counts (must be a multiple of settle time)'),
         Parameter('settle_time', .0002, float, 'time wait after changing frequencies using daq (s)'),
         Parameter('mw_generator_switching_time', .01, float, 'time wait after switching center frequencies on generator (s)'),
-        Parameter('turn_off_after', False, bool, 'if true MW output is turned off after the measurement'),
+        Parameter('MW_off_after', True, bool, 'if true MW output is turned off after the measurement'),
+        Parameter('laser_off_after', True, bool, 'if true MW output is turned off after the measurement'),
         Parameter('take_ref', True, bool, 'If true normalize each frequency sweep by the average counts. This should be renamed at some point because now we dont take additional data for the reference.'),
         Parameter('save_full_esr', True, bool, 'If true save all the esr traces individually'),
         Parameter('daq_type', 'PCI', ['PCI', 'cDAQ'], 'Type of daq to use for scan'),
@@ -56,6 +57,8 @@ class ESR(Script):
 
     _INSTRUMENTS = {
         'microwave_generator': MicrowaveGenerator,
+        'RF_generator': R8SMicrowaveGenerator,
+        'PB': CN041PulseBlaster,
         'NI6259': NI6259,
         'NI9263': NI9263,
         'NI9402': NI9402
@@ -183,6 +186,10 @@ class ESR(Script):
             self.log('unknown range parameter. Abort script')
             self._abort = True
 
+        self.instruments['RF_generator']['instance'].update({'enable_output': False})
+        self.instruments['PB']['instance'].update({'RF_switch': {'status': False}})
+        self.instruments['PB']['instance'].update({'laser': {'status': True}})
+        self.instruments['PB']['instance'].update({'microwave_switch':{'status': True}})
 
         num_freq_sections = int(freq_range) / int(self.instruments['microwave_generator']['instance'].settings['dev_width']*2) + 1
         clock_adjust = int((self.settings['integration_time'] + self.settings['settle_time']) / self.settings['settle_time'])
@@ -248,8 +255,13 @@ class ESR(Script):
             progress = self._calc_progress(scan_num)
             self.updateProgress.emit(progress)
 
-        if self.settings['turn_off_after']:
+        if self.settings['MW_off_after']:
             self.instruments['microwave_generator']['instance'].update({'enable_output': False})
+            self.instruments['PB']['instance'].update({'microwave_switch': {'status': False}})
+
+        if self.settings['laser_off_after']:
+            self.instruments['PB']['instance'].update({'laser': {'status': False}})
+
 
 
     def _calc_progress(self, scan_num):

@@ -626,7 +626,7 @@ class CN041PulseBlaster(PulseBlaster):
         ]),
         Parameter('RF_switch', [
             Parameter('channel', 1, int, 'channel to which the RF switch is connected to'),
-            Parameter('status', True, bool, 'True if voltage is high to the RF switch, false otherwise'),
+            Parameter('status', False, bool, 'True if voltage is high to the RF switch, false otherwise'),
             Parameter('delay_time', 0, float, 'delay time between pulse sending time and RF switch [ns]')
         ]),
 
@@ -648,7 +648,7 @@ class CN041PulseBlaster(PulseBlaster):
         ]),
         Parameter('microwave_switch', [
             Parameter('channel', 5, int, 'channel to which the microwave switch is connected to'),
-            Parameter('status', True, bool, 'True if voltage is high to the microwave switch, false otherwise'),
+            Parameter('status', False, bool, 'True if voltage is high to the microwave switch, false otherwise'),
             Parameter('delay_time', 0, float, 'delay time between pulse sending time and microwave switch [ns]')
         ]),
         Parameter('trig_channel', [

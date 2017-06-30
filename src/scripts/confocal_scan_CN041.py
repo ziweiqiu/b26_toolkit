@@ -118,7 +118,8 @@ class ConfocalScan(Script):
             self.var2_array = np.linspace(self.var2range[0], self.var2range[1], self.settings['num_points'][self.var2], endpoint=True)
 
             self.data = {'image_data': np.zeros((self.settings['num_points'][self.var2], self.settings['num_points'][self.var1])),
-                         'bounds': [self.var1range[0], self.var1range[1], self.var2range[0], self.var2range[1]]}
+                         'bounds': [self.var1range[0], self.var1range[1], self.var2range[0], self.var2range[1]],
+                         'varinitialpos': self.varinitialpos}
             self.data['extent'] = [self.var1range[0], self.var1range[1], self.var2range[1], self.var2range[0]]
             # self.data['varcalib'] = [self.settings['um_per_V'][self.var1],self.settings['um_per_V'][self.var1]]
             # self.data['varlbls'] = [self.var1 + ' [$\mu$m]',self.var2 + ' [$\mu$m]']
@@ -179,7 +180,8 @@ class ConfocalScan(Script):
                 np.linspace(self.var1range[0], self.var1range[1], self.settings['num_points'][self.var1],endpoint=True),self.clockAdjust)
             # self.var2_array = np.linspace(self.var2range[0], self.var2range[1], self.settings['num_points'][self.var2], endpoint=True)
             self.data = {'image_data': np.zeros(self.settings['num_points'][self.var1]),
-                         'bounds': [self.var1range[0], self.var1range[1]]}
+                         'bounds': [self.var1range[0], self.var1range[1]],
+                         'varinitialpos': self.varinitialpos}
             self.data['varlbls'] = self.var1 + ' [V]'
 
             while True:
@@ -223,7 +225,8 @@ class ConfocalScan(Script):
             self.var1_array = np.linspace(self.var1range[0], self.var1range[1], self.settings['num_points'][self.var1], endpoint=True)
 
             self.data = {'image_data': np.zeros((self.settings['num_points'][self.var1])),
-                         'bounds': [self.var1range[0], self.var1range[1]]}
+                         'bounds': [self.var1range[0], self.var1range[1]],
+                         'varinitialpos': self.varinitialpos}
             self.data['varlbls'] = self.var1 + ' [V]'
 
             # objective takes longer to settle after a big jump, so give it time before starting scan:
@@ -407,10 +410,10 @@ class ConfocalScan(Script):
         """
         if data is None:
             data = self.data
-        # plot_fluorescence_new(data['image_data'], data['extent'], self.data['varcalib'], self.data['varlbls'], self.varinitialpos, axes_list[0], min_counts=self.settings['min_counts_plot'], max_counts=self.settings['max_counts_plot'])
+        # plot_fluorescence_new(data['image_data'], data['extent'], self.data['varcalib'], self.data['varlbls'], self.data['varinitialpos'], axes_list[0], min_counts=self.settings['min_counts_plot'], max_counts=self.settings['max_counts_plot'])
 
         if np.ndim(data['image_data'])==2:
-            plot_fluorescence_new(data['image_data'], data['extent'], self.data['varlbls'], self.varinitialpos, axes_list[0], min_counts=self.settings['min_counts_plot'], max_counts=self.settings['max_counts_plot'])
+            plot_fluorescence_new(data['image_data'], data['extent'], self.data['varlbls'], self.data['varinitialpos'], axes_list[0], min_counts=self.settings['min_counts_plot'], max_counts=self.settings['max_counts_plot'])
         elif np.ndim(data['image_data'])==1:
             plot_counts(axes_list[0], data['image_data'],np.linspace(data['bounds'][0],data['bounds'][1],len(data['image_data'])),data['varlbls'])
 
