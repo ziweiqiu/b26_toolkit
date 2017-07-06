@@ -95,11 +95,17 @@ class PulseBlaster(Instrument):
             warnings.warn("NI Pulseblaster DLL not found. If it should be present, check the path:")
             dll_path = None
             print('dll_path: ', dll_path)
-            self.is_conneted = False
+            # self.is_conneted = False
+            self.is_connected = False # edited by Ziwei, 7/6/2017
         try:
-            self.pb = ctypes.windll.LoadLibrary(dll_path)
+            # self.pb = ctypes.windll.LoadLibrary(dll_path)
+            # added by Ziwei 7/6/2017
+            self.pb = ctypes.cdll.LoadLibrary(dll_path)
+            print('self.pb is successfully created!')
+            # self.pb = ctypes.oledll.LoadLibrary(dll_path)
         except WindowsError:
-            self.is_conneted = False
+            # self.is_conneted = False
+            self.is_connected = False  # edited by Ziwei, 7/6/2017
             warnings.warn("NI Pulseblaster DLL not found. If it should be present, check the path:")
         super(PulseBlaster, self).__init__(name, settings)
         self.update(self._DEFAULT_SETTINGS)
@@ -114,6 +120,7 @@ class PulseBlaster(Instrument):
 
         for key, value in settings.iteritems():
             self.pb.pb_reset()
+            print('Pulse Blaster is successfully reset.') # added by Ziwei 7/3/2017
             assert self.pb.pb_init() == 0, 'Could not initialize the pulseblsater on pb_init() command.'
             self.pb.pb_core_clock(ctypes.c_double(self.settings['clock_speed']))
             self.pb.pb_start_programming(self.PULSE_PROGRAM)
@@ -197,6 +204,7 @@ class PulseBlaster(Instrument):
                         overlapping_pulses.append((overlapping_pulse_1, overlapping_pulse_2))
                     else:
                         overlapping_pulses.append((overlapping_pulse_2, overlapping_pulse_1))
+                    print('find overlapping pulse: {:d}'.format(pulse_id))
 
         return overlapping_pulses
 
@@ -470,7 +478,9 @@ class PulseBlaster(Instrument):
         for command in pb_commands:
             if command.duration < 15:
                 raise RuntimeError("Detected command with duration <15ns.")
-
+            # if command.duration < 5:
+            #     raise RuntimeError("Detected command with duration <5ns.")
+                # edited by Ziwei 7/3/2017, change command.duration from 15 to 5 to avoid validation failure, might cause other problems
         # begin programming the pulseblaster
         assert self.pb.pb_init() == 0, 'Could not initialize the pulseblsater on pb_init() command.'
         self.pb.pb_core_clock(ctypes.c_double(self.settings['clock_speed']))
