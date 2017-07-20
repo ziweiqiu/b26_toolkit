@@ -248,7 +248,7 @@ def fit_esr(freq, ampl, strain_filtering=False, verbose = False):
     CONTRAST_FACTOR = 3 # require that peaks are at least a factor 3 deeper than the noise (calculated as std dev of data-fit )
     F0 = 2.878e9
     MIN_WIDTH = 3*np.mean(np.diff(freq)) # set the minumum width to at least 3 times the sample spacing
-    MAX_WIDTH = 100e6  # set the max width 100MHz
+    MAX_WIDTH = 30e6  # set the max width 100MHz
     freq_peaks, ampl_peaks = find_nv_peaks(freq, ampl)
 
 

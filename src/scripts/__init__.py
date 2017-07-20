@@ -32,10 +32,12 @@ from esr import ESR
 from esr_two_freq_continuous import ESRTwoFreqContinuous
 from find_nv import FindNV
 # from pulse_blaster_scripts import XY8, T1, Rabi, CalibrateMeasurementWindow, PDD, XY4, T1SpinFlip, PulsedESR,PulsedESRSlow, Rabi_double_init, HahnEcho_double_init
-from pulse_blaster_scripts_CN041 import Rabi, HahnEcho, DEER
+from pulse_blaster_scripts_CN041 import Rabi, HahnEcho, DEER, GrDelayMeas
 from esr_and_rabi import ESRAndRabi
+from esr_rabi_deer import EsrRabiDeer
 from pulse_delays import PulseDelays
 from correlate_images import Track_Correlate_Images, Take_And_Correlate_Images
+from autofocus_CN041 import AutoFocusDAQ, AutoFocusTwoPoints
 
 
 # from keysight_get_spectrum import KeysightGetSpectrum

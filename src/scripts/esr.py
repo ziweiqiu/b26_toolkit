@@ -44,7 +44,7 @@ class ESR(Script):
         Parameter('settle_time', .0002, float, 'time wait after changing frequencies using daq (s)'),
         Parameter('mw_generator_switching_time', .01, float, 'time wait after switching center frequencies on generator (s)'),
         Parameter('MW_off_after', True, bool, 'if true MW output is turned off after the measurement'),
-        Parameter('laser_off_after', True, bool, 'if true MW output is turned off after the measurement'),
+        Parameter('laser_off_after', True, bool, 'if true laser is turned off after the measurement'),
         Parameter('take_ref', True, bool, 'If true normalize each frequency sweep by the average counts. This should be renamed at some point because now we dont take additional data for the reference.'),
         Parameter('save_full_esr', True, bool, 'If true save all the esr traces individually'),
         Parameter('daq_type', 'PCI', ['PCI', 'cDAQ'], 'Type of daq to use for scan'),

@@ -380,7 +380,10 @@ for a given experiment
         failure_list = []
         for pulse_sequence in self.pulse_sequences:
             overlapping_pulses = CN041PulseBlaster.find_overlapping_pulses(pulse_sequence)
+
             if not overlapping_pulses == []:
+                self.log('found overlapping pulses in pulse validation') # added by Ziwei 7/3/2017
+
                 failure_list.append(CN041PulseBlaster.find_overlapping_pulses(pulse_sequence))
                 break
             for pulse in pulse_sequence:
@@ -397,13 +400,19 @@ for a given experiment
             assert len(pb_commands) < 4096, "Generated a number of commands too long for the pulseblaster!"
 
             short_pulses = [command for command in pb_commands if command.duration < 15]
+            # short_pulses = [command for command in pb_commands if command.duration < 5]
+            # edited by Ziwei 7/3/2017, change command.duration from 15 to 5 to avoid validation failure, might cause other problems
             if short_pulses:
+                # for short_pulse in short_pulses:
+                #     self.log('found short pulses in pulse validation, command duration = {:f}.'.format(short_pulse.duration)) # added by Ziwei 7/3/2017
+                # somehow the command above makes WindowsError happen very often!! have to comment it out.
                 failure_list.append(short_pulses[0])
             else:
                 failure_list.append([])  # good sequence
 
         if any([isinstance(a, pulse_blaster.PBCommand) for a in failure_list]):
-            self.log('Validation failed. At least one pulse in the sequence is invalid.')
+            self.log('Validation failed! At least one pulse in the sequence is invalid.')
+            self.log(failure_list)
 
         return self.pulse_sequences, num_averages, tau_list, measurement_gate_width, failure_list
 

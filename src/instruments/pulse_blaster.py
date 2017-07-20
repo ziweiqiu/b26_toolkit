@@ -98,9 +98,9 @@ class PulseBlaster(Instrument):
             # self.is_conneted = False
             self.is_connected = False # edited by Ziwei, 7/6/2017
         try:
-            # self.pb = ctypes.windll.LoadLibrary(dll_path)
+            self.pb = ctypes.windll.LoadLibrary(dll_path)
             # added by Ziwei 7/6/2017
-            self.pb = ctypes.cdll.LoadLibrary(dll_path)
+            # self.pb = ctypes.cdll.LoadLibrary(dll_path)
             print('self.pb is successfully created!')
             # self.pb = ctypes.oledll.LoadLibrary(dll_path)
         except WindowsError:
@@ -119,8 +119,8 @@ class PulseBlaster(Instrument):
         super(PulseBlaster, self).update(settings)
 
         for key, value in settings.iteritems():
-            self.pb.pb_reset()
-            print('Pulse Blaster is successfully reset.') # added by Ziwei 7/3/2017
+            # self.pb.pb_reset()
+            # print('Pulse Blaster is successfully reset.') # added by Ziwei 7/3/2017
             assert self.pb.pb_init() == 0, 'Could not initialize the pulseblsater on pb_init() command.'
             self.pb.pb_core_clock(ctypes.c_double(self.settings['clock_speed']))
             self.pb.pb_start_programming(self.PULSE_PROGRAM)
@@ -133,7 +133,7 @@ class PulseBlaster(Instrument):
             self.pb.pb_close()
             break
 
-        print('AB20170628: pulse blaster updated')
+        # print('AB20170628: pulse blaster updated')
 
     def settings2bits(self):
         #COMMENT_ME
@@ -497,7 +497,7 @@ class PulseBlaster(Instrument):
             assert return_value >=0, 'There was an error while programming the pulseblaster'
         self.pb.pb_stop_programming()
 
-        print('AB20170628: pulse blaster programmed')
+        # print('AB20170628: pulse blaster programmed')
 
     def start_pulse_seq(self):
         """
@@ -512,7 +512,7 @@ class PulseBlaster(Instrument):
         self.pb.pb_close()
         self.sequence_start_time = datetime.datetime.now()
 
-        print('AB20170628: pulse blaster started', self.pb)
+        # print('AB20170628: pulse blaster started', self.pb)
 
     def wait(self):
         #COMMENT_ME

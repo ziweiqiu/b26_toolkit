@@ -89,9 +89,9 @@ class R8SMicrowaveGenerator(Instrument):
         # XXXXX MW ISSUE = START
         # ===========================================
         for key, value in settings.iteritems():
-            print (key + ' is updated')
-            print (settings)
-            print(' ')
+            # print (key + ' is updated')
+            # print (settings)
+            # print(' ')
             if key == 'connection_type':
                 self._connect()
             else:

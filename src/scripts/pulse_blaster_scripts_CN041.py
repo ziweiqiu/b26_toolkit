@@ -68,11 +68,16 @@ This script applies a microwave pulse at fixed power for varying durations to me
         ### Turn on MW generator:
         self.instruments['mw_gen']['instance'].update({'enable_output': True})
 
+        ### Turn off green light (the pulse blaster will pulse it on when needed)
+        self.instruments['PB']['instance'].update({'laser': {'status': False}})
+
         super(Rabi, self)._function(self.data)
+
+        ### Turn off green light:
+        self.instruments['PB']['instance'].update({'laser': {'status': False}})
 
         counts = self.data['counts'][:, 1] / self.data['counts'][:, 0]
         tau = self.data['tau']
-
 
         try:
             fits = fit_rabi_decay(tau, counts, varibale_phase=True)
@@ -80,6 +85,21 @@ This script applies a microwave pulse at fixed power for varying durations to me
         except:
             self.data['fits'] = None
             self.log('rabi fit failed')
+
+        if self.data['fits'] is not None:
+            counts = self.data['counts'][:,1]/ self.data['counts'][:,0]
+            tau =self.data['tau']
+            fits = self.data['fits']
+
+            RabiT = 2*np.pi / fits[1]
+            T2star = fits[4]
+            phaseoffs = fits[2]
+            pi_time = RabiT / 2 - phaseoffs * RabiT / (2 * np.pi)
+            pi_half_time = RabiT / 4 - phaseoffs * RabiT / (2 * np.pi)
+            three_pi_half_time = 3 * RabiT / 4 - phaseoffs * RabiT / (2 * np.pi)
+            self.data['pi_time'] = pi_time
+            self.data['pi_half_time'] = pi_half_time
+            self.data['three_pi_half_time'] = three_pi_half_time
 
     def _create_pulse_sequences(self):
         '''
@@ -125,6 +145,7 @@ This script applies a microwave pulse at fixed power for varying durations to me
                 Pulse('laser', laser_off_time + tau + 2*mw_sw_buffer + nv_reset_time + laser_off_time + tau + 2*mw_sw_buffer + delay_mw_readout, nv_reset_time),
                 Pulse('apd_readout', laser_off_time + tau + 2*mw_sw_buffer + nv_reset_time + laser_off_time + tau + 2*mw_sw_buffer + delay_mw_readout + delay_readout, meas_time)
             ]
+
             pulse_sequences.append(pulse_sequence)
 
         print('number of sequences before validation ', len(pulse_sequences))
@@ -154,7 +175,8 @@ This script applies a microwave pulse at fixed power for varying durations to me
             axislist[0].plot(tau, counts, 'b')
             axislist[0].hold(True)
 
-            axislist[0].plot(tau, cose_with_decay(tau, *fits), 'k', lw=3)
+            tauinterp = np.linspace(np.min(tau),np.max(tau),100)
+            axislist[0].plot(tauinterp, cose_with_decay(tauinterp, *fits), 'k', lw=3)
             # pi_time = 2*np.pi / fits[1] / 2
             RabiT = 2*np.pi / fits[1]
             T2star = fits[4]
@@ -162,7 +184,6 @@ This script applies a microwave pulse at fixed power for varying durations to me
             pi_time = RabiT / 2 - phaseoffs * RabiT / (2 * np.pi)
             pi_half_time = RabiT / 4 - phaseoffs * RabiT / (2 * np.pi)
             three_pi_half_time = 3 * RabiT / 4 - phaseoffs * RabiT / (2 * np.pi)
-
 
             axislist[0].plot(pi_time, cose_with_decay(pi_time, *fits), 'ro', lw=3)
             axislist[0].annotate('$\pi$={:0.3f}'.format(pi_time), xy = (pi_time, cose_with_decay(pi_time, *fits)), xytext = (pi_time - 10., cose_with_decay(pi_time, *fits)-.01), xycoords = 'data')
@@ -178,6 +199,85 @@ This script applies a microwave pulse at fixed power for varying durations to me
             axislist[0].set_title('Rabi mw-power:{:0.1f}dBm, mw_freq:{:0.3f} GHz'.format(self.settings['mw_pulses']['mw_power'], self.settings['mw_pulses']['mw_frequency']*1e-9))
             axislist[0].legend(labels=('Ref Fluorescence', 'Rabi Data'), fontsize=8)
 
+class GrDelayMeas(PulseBlasterBaseScript):
+    """
+This script measures the green laser delay during AOM turn ON and turn OFF
+==> Last edited by Alexei Bylinskii 06/28/2017 for use in CN041 sensing lab
+    """
+    _DEFAULT_SETTINGS = [
+        Parameter('tau_times', [
+            Parameter('min_time', 15, float, 'minimum green delay (in ns)'),
+            Parameter('max_time', 600, float, 'max green delay (in ns)'),
+            Parameter('time_step', 15, [15,20,30,50,100],'time step increment of green delay (in ns)')
+        ]),
+        Parameter('read_out', [
+            Parameter('meas_time', 30, int, '[ns] APD window to count photons'),
+            Parameter('green_time', 300, float, '[ns] duration of green pulse '),
+        ]),
+        Parameter('num_averages', 100000, int, 'number of averages'),
+        Parameter('skip_invalid_sequences', True, bool, 'Skips any sequences with <15ns commands')
+    ]
+
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster}
+
+    def _function(self):
+        super(GrDelayMeas, self)._function(self.data)
+        counts = self.data['counts']
+        tau = self.data['tau']
+
+    def _create_pulse_sequences(self):
+        '''
+
+        Returns: pulse_sequences, num_averages, tau_list, meas_time
+            pulse_sequences: a list of pulse sequences, each corresponding to a different time 'tau' that is to be
+            scanned over. Each pulse sequence is a list of pulse objects containing the desired pulses. Each pulse
+            sequence must have the same number of daq read pulses
+            num_averages: the number of times to repeat each pulse sequence
+            tau_list: the list of times tau, with each value corresponding to a pulse sequence in pulse_sequences
+            meas_time: the width (in ns) of the daq measurement
+
+        '''
+        pulse_sequences = []
+
+        # JG 16-08-25 changed (15ns min spacing is taken care of later):
+        # tau_list = range(0, int(self.settings['tau_times']['max_time']), self.settings['tau_times']['time_step'])
+        tau_list = range(int(self.settings['tau_times']['min_time']), int(self.settings['tau_times']['max_time']),self.settings['tau_times']['time_step'])
+
+        # ignore the sequence if the mw-pulse is shorter than 15ns (0 is ok because there is no mw pulse!)
+        tau_list = [x for x in tau_list if x == 0 or x >= 15]
+        print('tau_list', tau_list)
+
+        meas_time = self.settings['read_out']['meas_time']
+        green_time = self.settings['read_out']['green_time']
+
+        for tau in tau_list:
+            pulse_sequence = \
+                [Pulse('laser', 1000, green_time),
+                 Pulse('apd_readout', 1000+tau, meas_time),
+                 ]
+
+            pulse_sequences.append(pulse_sequence)
+
+        print('number of sequences before validation ', len(pulse_sequences))
+        return pulse_sequences, self.settings['num_averages'], tau_list, meas_time
+
+
+    def _plot(self, axislist, data = None):
+        '''
+        Plot 1: self.data['tau'], the list of times specified for a given experiment, verses self.data['counts'], the data
+        received for each time
+        Plot 2: the pulse sequence performed at the current time (or if plotted statically, the last pulse sequence
+        performed
+
+        Args:
+            axes_list: list of axes to write plots to (uses first 2)
+            data (optional) dataset to plot (dictionary that contains keys counts, tau, fits), if not provided use self.data
+        '''
+
+        if data is None:
+            data = self.data
+
+        super(GrDelayMeas, self)._plot(axislist)
 
 class HahnEcho(PulseBlasterBaseScript): # ER 5.25.2017
     """
@@ -363,7 +463,7 @@ To symmetrize the sequence between the 0 and +/-1 state we reinitialize every ti
         ]),
         Parameter('RF_pulses', [
             Parameter('RF_power', -45.0, float, 'microwave power in dB'),
-            Parameter('RF_frequency', 2.87e9, float, 'microwave frequency in Hz')
+            Parameter('RF_frequency', 250e6, float, 'microwave frequency in Hz')
             #Parameter('pi_pulse_time', 50.0, float, 'time duration of a pi pulse (in ns)'),
             #Parameter('pi_half_pulse_time', 25.0, float, 'time duration of a pi/2 pulse (in ns)'),
             #Parameter('3pi_half_pulse_time', 75.0, float, 'time duration of a 3pi/2 pulse (in ns)')
@@ -393,7 +493,8 @@ To symmetrize the sequence between the 0 and +/-1 state we reinitialize every ti
     def _function(self):
         #COMMENT_ME
 
-        self.data['fits'] = None
+        self.data['fits_echo'] = None
+        self.data['fits_deer'] = None
 
         ### MW generator amplitude and frequency settings:
         self.instruments['mw_gen']['instance'].update({'amplitude': self.settings['mw_pulses']['mw_power']})
@@ -414,24 +515,30 @@ To symmetrize the sequence between the 0 and +/-1 state we reinitialize every ti
         ### Turn on RF generator:
         self.instruments['RF_gen']['instance'].update({'enable_output': True})
 
+        ### Turn off green light (the pulse blaster will pulse it on when needed)
+        self.instruments['PB']['instance'].update({'laser': {'status': False}})
+
         super(DEER, self)._function(self.data)
 
-        counts_echo = (- self.data['counts'][:, 1] + self.data['counts'][:,0]) / (self.data['counts'][:,1] + self.data['counts'][:, 0])
-        counts_deer = (- self.data['counts'][:, 3] + self.data['counts'][:,2]) / (self.data['counts'][:,3] + self.data['counts'][:, 2])
+        ### Turn off green light:
+        self.instruments['PB']['instance'].update({'laser': {'status': False}})
+
+        self.data['norm_echo'] = (- self.data['counts'][:, 1] + self.data['counts'][:,0]) / (self.data['counts'][:,1] + self.data['counts'][:, 0])
+        self.data['norm_deer'] = (- self.data['counts'][:, 3] + self.data['counts'][:,2]) / (self.data['counts'][:,3] + self.data['counts'][:, 2])
         tau = self.data['tau']
 
         try:
-            fits = fit_exp_decay(tau, counts_echo, offset = True, verbose = True)
+            fits = fit_exp_decay(tau, self.data['norm_echo'], offset = True, verbose = True)
             self.data['fits_echo'] = fits
         except:
-            self.data['fits'] = None
+            self.data['fits_echo'] = None
             self.log('ECHO t2 fit failed')
 
         try:
-            fits = fit_exp_decay(tau, counts_deer, offset=True, verbose=True)
+            fits = fit_exp_decay(tau, self.data['norm_deer'], offset=True, verbose=True)
             self.data['fits_deer'] = fits
         except:
-            self.data['fits'] = None
+            self.data['fits_deer'] = None
             self.log('DEER t2 fit failed')
 
     def _create_pulse_sequences(self):
@@ -562,19 +669,23 @@ To symmetrize the sequence between the 0 and +/-1 state we reinitialize every ti
         if data is None:
             data = self.data
 
-        if data['fits'] is not None:
-            counts = (-data['counts'][:,1] + data['counts'][:,0])/ (data['counts'][:,0] + data['counts'][:,1])
+        if data['fits_echo'] is not None and data['fits_deer'] is not None:
             tau = data['tau']
-            fits = data['fits']
+            fits_echo = data['fits_echo']
+            fits_deer = data['fits_deer']
 
-            axislist[0].plot(tau, counts, 'b')
+            axislist[0].plot(tau, self.data['norm_echo'], 'b')
             axislist[0].hold(True)
+            axislist[0].plot(tau, self.data['norm_deer'], 'r')
 
-            axislist[0].plot(tau, exp_offset(tau, fits[0], fits[1], fits[2]))
-            axislist[0].set_title('T2 decay time (simple exponential, p = 1): {:2.1f} ns'.format(fits[1]))
+            tauinterp = np.linspace(np.min(tau),np.max(tau),100)
+            axislist[0].plot(tauinterp, exp_offset(tauinterp, fits_echo[0], fits_echo[1], fits_echo[2]),'b:')
+            axislist[0].plot(tauinterp, exp_offset(tauinterp, fits_deer[0], fits_deer[1], fits_deer[2]), 'r:')
+            axislist[0].set_title('T2 decay times (simple exponential, p = 1): echo={:2.1f} ns, deer = {:2.1f} ns'.format(fits_echo[1],fits_deer[1]))
+            axislist[0].legend(labels=('Echo', 'DEER', 'exp fit: echo', 'exp fit: deer'), fontsize=8)
         else:
             super(DEER, self)._plot(axislist)
-            axislist[0].set_title('Rabi mw-power:{:0.1f}dBm, mw_freq:{:0.3f} GHz'.format(self.settings['mw_pulses']['mw_power'], self.settings['mw_pulses']['mw_frequency']*1e-9))
+            axislist[0].set_title('DEER mw-power:{:0.1f}dBm, mw_freq:{:0.3f} GHz, rf-power:{:0.1f}dBm, rf_freq:{:0.3f} MHz'.format(self.settings['mw_pulses']['mw_power'], self.settings['mw_pulses']['mw_frequency']*1e-9,self.settings['RF_pulses']['RF_power'], self.settings['RF_pulses']['RF_frequency']*1e-6))
             axislist[0].legend(labels=('Echo up', 'Echo down', 'DEER up', 'DEER down'), fontsize=8)
 
 
