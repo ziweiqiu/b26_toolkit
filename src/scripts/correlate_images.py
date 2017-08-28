@@ -24,6 +24,8 @@ from copy import deepcopy
 import numpy as np
 from matplotlib import patches
 
+from b26_toolkit.src.instruments import CN041PulseBlaster
+
 
 class Take_And_Correlate_Images(Script):
     '''
@@ -32,10 +34,11 @@ class Take_And_Correlate_Images(Script):
     '''
 
     _DEFAULT_SETTINGS = [
-        Parameter('use_trackpy', False, bool, 'Use trackpy to create artificial nv-only images to filter out background')
+        Parameter('use_trackpy', False, bool, 'Use trackpy to create artificial nv-only images to filter out background'),
+        Parameter('laser_off_after', True, bool, 'if true laser is turned off after the measurement')
     ]
 
-    _INSTRUMENTS = {}
+    _INSTRUMENTS = {'PB': CN041PulseBlaster}
     _SCRIPTS = {'GalvoScan': GalvoScan}
     # _SCRIPTS = {}
 
@@ -56,6 +59,10 @@ class Take_And_Correlate_Images(Script):
         determined pixel shift to calculate a shift for each of the nvs in the old_nv_list, which is given to it by
         a superscript, then store it as new_NV_list in data
         """
+
+        # LASER ON:
+        self.instruments['PB']['instance'].update({'laser': {'status': True}})
+
 
         if self.data['baseline_image'] == []:
             self.log('No baseline image avaliable. Taking baseline.')
@@ -86,6 +93,10 @@ class Take_And_Correlate_Images(Script):
             self.scripts['GalvoScan'].run()
             self.data['baseline_image'] = self.scripts['GalvoScan'].data['image_data']
             self.data['image_extent'] = self.scripts['GalvoScan'].data['extent']
+
+        # LASER OFF if desired:\
+        if self.settings['laser_off_after']:
+            self.instruments['PB']['instance'].update({'laser': {'status': False}})
 
     def _plot(self, axes_list):
         '''
@@ -136,9 +147,10 @@ Track_Correlate_Images:
     _DEFAULT_SETTINGS = [
         Parameter('mode', 'plain', ['plain', 'edge_detection', 'trackpy'], 'mode for correlation algorithm: plain images, identify points using trackpy to filter out background from nv-images or edge detection'),
         Parameter('baseline_update_frequency', 0, int, 'Use the last acquired image as the baseline for the next run after x executions of the script. x = 0 never update. Tip: use x=1 to update baseline'),
-        Parameter('display_processed_images', False, bool, 'Show processed images used for correlation insead of raw images')
+        Parameter('display_processed_images', False, bool, 'Show processed images used for correlation insead of raw images'),
+        Parameter('laser_off_after', True, bool, 'if true laser is turned off after the measurement')
     ]
-    _INSTRUMENTS = {}
+    _INSTRUMENTS = {'PB': CN041PulseBlaster}
     _SCRIPTS = {'take_baseline_image': GalvoScan, 'take_new_image': GalvoScan}
 
     def __init__(self, instruments = None, name = None, settings = None, scripts = None, log_function = None, data_path = None):
@@ -161,6 +173,10 @@ Track_Correlate_Images:
         """
         see class doc string
         """
+
+        # LASER ON:
+        self.instruments['PB']['instance'].update({'laser': {'status': True}})
+
         def update_baseline():
             """
             update baseline image from the subscript data
@@ -212,6 +228,10 @@ Track_Correlate_Images:
 
             self.log('setting galvo to x={:0.3f} y={:0.3f}'.format(final_galvo_position[0], final_galvo_position[1]))
             # self.scripts['take_new_image'].set_galvo_location(final_galvo_position)
+
+        # LASER OFF if desired:\
+        if self.settings['laser_off_after']:
+            self.instruments['PB']['instance'].update({'laser': {'status': False}})
 
     def get_axes_layout(self, figure_list):
         """

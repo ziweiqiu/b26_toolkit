@@ -141,6 +141,7 @@ class MagnetCoils(NI9263):
     ])
 
     def update(self, settings):
+        # type: (object) -> object
         """
         Updates the settings in software and, if applicable, takes an action to modify the hardware, such as opening
         a beamblock or spinning a filterwheel

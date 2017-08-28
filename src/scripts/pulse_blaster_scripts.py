@@ -18,7 +18,7 @@
 
 import numpy as np
 from b26_toolkit.src.scripts.pulse_blaster_base_script import PulseBlasterBaseScript
-from b26_toolkit.src.instruments import NI6259, B26PulseBlaster, MicrowaveGenerator, Pulse
+from b26_toolkit.src.instruments import NI6259, CN041PulseBlaster, MicrowaveGenerator, Pulse
 from b26_toolkit.src.plotting.plots_1d import plot_esr, plot_pulses, update_pulse_plot, plot_1d_simple_timetrace_ns, update_1d_simple
 from PyLabControl.src.core import Parameter, Script
 from b26_toolkit.src.data_processing.fit_functions import fit_rabi_decay, cose_with_decay, fit_exp_decay, exp_offset
@@ -38,7 +38,7 @@ This script applies a microwave pulse at fixed power and durations for varying f
         Parameter('freq_points', 100, int, 'number of frequencies in scan in Hz'),
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
 
     def _function(self):
         #COMMENT_ME
@@ -154,7 +154,7 @@ This is different from the actual pulsed ESR, where we apply pi/2 pulses to get 
         Parameter('max_points', 100, int, 'number of points to display if 0 show all')
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
 
     def _function(self):
         #COMMENT_ME
@@ -288,7 +288,7 @@ This is different from the actual pulsed ESR, where we apply pi/2 pulses to get 
         Parameter('skip_invalid_sequences', True, bool, 'Skips any sequences with <15ns commands'),
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
 
     def _function(self):
         #COMMENT_ME
@@ -463,6 +463,7 @@ This is different from the actual pulsed ESR, where we apply pi/2 pulses to get 
 class Rabi(PulseBlasterBaseScript):
     """
 This script applies a microwave pulse at fixed power for varying durations to measure Rabi Oscillations
+==> Last edited by Alexei Bylinskii 06/28/2017 for use in CN041 sensing lab
     """
     _DEFAULT_SETTINGS = [
         Parameter('mw_pulses', [
@@ -486,15 +487,21 @@ This script applies a microwave pulse at fixed power for varying durations to me
         Parameter('skip_invalid_sequences', True, bool, 'Skips any sequences with <15ns commands'),
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
 
     def _function(self):
-        #COMMENT_ME
 
         self.data['fits'] = None
-        self.instruments['mw_gen']['instance'].update({'modulation_type': 'IQ'})
+
+        ### MW generator amplitude and frequency settings:
         self.instruments['mw_gen']['instance'].update({'amplitude': self.settings['mw_pulses']['mw_power']})
         self.instruments['mw_gen']['instance'].update({'frequency': self.settings['mw_pulses']['mw_frequency']})
+        ### MW generator modulation settigns (OFF for Rabi):
+        # self.instruments['mw_gen']['instance'].update({'modulation_type': 'IQ'})
+        self.instruments['mw_gen']['instance'].update({'enable_modulation': False})
+        ### Turn on MW generator:
+        self.instruments['mw_gen']['instance'].update({'enable_output': True})
+
         super(Rabi, self)._function(self.data)
 
         counts = self.data['counts'][:, 1] / self.data['counts'][:, 0]
@@ -524,7 +531,7 @@ This script applies a microwave pulse at fixed power for varying durations to me
         # tau_list = range(int(max(15, self.settings['tau_times']['time_step'])), int(self.settings['tau_times']['max_time'] + 15),
         #                  self.settings['tau_times']['time_step'])
         # JG 16-08-25 changed (15ns min spacing is taken care of later):
-        tau_list = range(0, int(self.settings['tau_times']['max_time']),self.settings['tau_times']['time_step'])
+        tau_list = range(0, int(self.settings['tau_times']['max_time']), self.settings['tau_times']['time_step'])
 
         # ignore the sequence if the mw-pulse is shorter than 15ns (0 is ok because there is no mw pulse!)
         tau_list = [x for x in tau_list if x == 0 or x >= 15]
@@ -635,7 +642,7 @@ This script applies a microwave pulse at fixed power for varying durations to me
         Parameter('skip_invalid_sequences', True, bool, 'Skips any sequences with <15ns commands'),
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
 
     def _function(self):
         #COMMENT_ME
@@ -775,7 +782,7 @@ This script runs a Hahn echo on the NV to find the Hahn echo T2. To symmetrize t
         Parameter('skip_invalid_sequences', True, bool, 'Skips any sequences with <15ns commands'),
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
 
     def _function(self):
         #COMMENT_ME
@@ -915,7 +922,7 @@ This script applies a microwave pulse at fixed power for varying durations to me
         Parameter('skip_invalid_sequences', False, bool, 'Skips any sequences with <15ns commands')
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
 
     def _function(self):
         #COMMENT_ME
@@ -1017,7 +1024,7 @@ This script applies a microwave pulse at fixed power for varying durations to me
 #         Parameter('reset_time', 1000000, int, 'time with laser on at the beginning to reset state')
 #     ]
 #
-#     _INSTRUMENTS = {'daq': DAQ, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+#     _INSTRUMENTS = {'daq': DAQ, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
 #
 #     def _function(self):
 #         self.instruments['mw_gen']['instance'].update({'modulation_type': 'IQ'})
@@ -1075,7 +1082,7 @@ This script applies a microwave pulse at fixed power for varying durations to me
         Parameter('reset_time', 1000000, int, 'time with laser on at the beginning to reset state')
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
 
     def _function(self):
         self.instruments['mw_gen']['instance'].update({'modulation_type': 'IQ'})
@@ -1148,7 +1155,7 @@ It applies a sliding measurement window with respect to a readout from the NV 0 
         Parameter('num_averages', 1000000, int, 'number of averages')
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
 
     def _function(self):
         self.instruments['mw_gen']['instance'].update({'modulation_type': 'IQ'})
@@ -1235,7 +1242,7 @@ This script runs a CPMG pulse sequence.
         Parameter('skip_invalid_sequences', True, bool, 'Skips any sequences with <15ns commands'),
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
     _SCRIPTS = {}
 
     def _function(self):
@@ -1400,7 +1407,7 @@ This script runs a CPMG pulse sequence.
         Parameter('skip_invalid_sequences', True, bool, 'Skips any sequences with <15ns commands'),
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
     _SCRIPTS = {}
 
     def _function(self):
@@ -1545,7 +1552,7 @@ Tau/2 is the time between the center of the pulses!
         Parameter('skip_invalid_sequences', False, bool, 'Skips any sequences with <15ns commands')
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
 
     _SCRIPTS = {}
 
@@ -1687,7 +1694,7 @@ This script runs a XY sequence for different number of pi pulses. Without pi-pul
         Parameter('skip_invalid_sequences', False, bool, 'Skips any sequences with <15ns commands')
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
 
     _SCRIPTS = {}
 
@@ -1786,7 +1793,7 @@ This script measures the relaxation time of an NV center
         Parameter('tau_scale', 'linear', ['linear', 'logarithmic'])
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster}
 
     def _create_pulse_sequences(self):
         """
@@ -1871,7 +1878,7 @@ Optionally a microwave pulse is applied as part of the initialization to prepare
                   )
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster, 'mw_gen': MicrowaveGenerator}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster, 'mw_gen': MicrowaveGenerator}
 
     def _function(self):
         #COMMENT_ME

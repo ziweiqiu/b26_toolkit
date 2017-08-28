@@ -21,10 +21,11 @@
 from ni_daq_v2 import NI6259, NI9263, NI9402
 # from piezo_controller import PiezoController
 # from zurich_instruments import ZIHF2
-from pulse_blaster import B26PulseBlaster, Pulse
+from pulse_blaster import CN041PulseBlaster, Pulse
 # from maestro import MaestroLightControl
 # from attocube import Attocube
 from microwave_generator import MicrowaveGenerator
+from R8S_microwave_generator import R8SMicrowaveGenerator
 # from magnet_coils import MagnetCoils
 # from temperature_controller import TemperatureController
 # from montana import CryoStation

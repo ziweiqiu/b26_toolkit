@@ -22,7 +22,7 @@ import pyvisa.errors
 from PyLabControl.src.core import Parameter, Instrument
 
 # RANGE_MIN = 2025000000 #2.025 GHz
-RANGE_MIN = 1012500000
+RANGE_MIN = 100000000
 RANGE_MAX = 4050000000 #4.050 GHZ
 
 class MicrowaveGenerator(Instrument):
@@ -41,7 +41,7 @@ class MicrowaveGenerator(Instrument):
         Parameter('phase', 0, float, 'output phase'),
         Parameter('enable_modulation', True, bool, 'enable modulation'),
         Parameter('modulation_type', 'FM', ['AM', 'FM', 'PhaseM', 'Freq sweep', 'Pulse', 'Blank', 'IQ'],
-                  'Modulation Type: 0= AM, 1=FM, 2= PhaseM, 3= Freq sweep, 4= Pulse, 5 = Blank, 6=IQ'),
+                  'Modulation Type: 0= AM, 1=FM, 2= PhaseM, 3= Freq sweep, 4= Pulse, 5 = Blank, 7=IQ'),
         Parameter('modulation_function', 'External', ['Sine', 'Ramp', 'Triangle', 'Square', 'Noise', 'External'],
                   'Modulation Function: 0=Sine, 1=Ramp, 2=Triangle, 3=Square, 4=Noise, 5=External'),
         Parameter('pulse_modulation_function', 'External', ['Square', 'Noise(PRBS)', 'External'], 'Pulse Modulation Function: 3=Square, 4=Noise(PRBS), 5=External'),
@@ -188,7 +188,10 @@ class MicrowaveGenerator(Instrument):
         elif param == 'modulation_type':
             return 'TYPE'
         elif param == 'modulation_function':
-            return 'MFNC'
+            if self.settings['modulation_type'] == 'IQ':
+                return 'QFNC'
+            else:
+                return 'MFNC'
         elif param == 'pulse_modulation_function':
             return 'PFNC'
         elif param == 'dev_width':
@@ -211,7 +214,9 @@ class MicrowaveGenerator(Instrument):
         elif value == 'Blank':
             return 5
         elif value == 'IQ':
-            return 6
+            # return 6 when using SG384
+            # return 7 when using SG394
+            return 7
         else:
             raise KeyError
 
@@ -229,7 +234,9 @@ class MicrowaveGenerator(Instrument):
             return 'Pulse'
         elif value == 5:
             return 'Blank'
-        elif value == 6:
+        elif value == 7:
+            # for SG384, the value is 6
+            # for SG394, the value is 7 (QAM)
             return 'IQ'
         else:
             raise KeyError

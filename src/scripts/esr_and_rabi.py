@@ -17,7 +17,8 @@
 """
 
 from PyLabControl.src.core import Script
-from b26_toolkit.src.scripts import ESR, Rabi
+from b26_toolkit.src.scripts import ESR
+from b26_toolkit.src.scripts.pulse_blaster_scripts_CN041 import Rabi
 
 
 class ESRAndRabi(Script):
@@ -54,9 +55,8 @@ class ESRAndRabi(Script):
                 self.log('Resonance frequency found ({:0.2e}) was above esr sweep range, aborting rabi attempt'.format(self.rabi_frequency))
             else:
                 self.log('Starting rabi with frequency {:.4e} Hz'.format(self.rabi_frequency))
-                self.scripts['rabi'].settings['mw_frequency'] = float(self.rabi_frequency)
+                self.scripts['rabi'].settings['mw_pulses']['mw_frequency'] = float(self.rabi_frequency)
                 self.scripts['rabi'].run()
         else:
             self.log('No resonance frequency found skipping rabi attempt')
-
 

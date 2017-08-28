@@ -60,7 +60,7 @@ DAQmx_Val_ChanForAllLines = 1  # One Channel For All Lines
 # =============== NI DAQ 6259======= =======================
 # ==========================================================
 
-class DAQ(Instrument):
+class DAQold(Instrument):
     """
     Class containing all functions used to interact with the NI DAQ, mostly
     acting as a wrapper around C-level dlls provided by NI. Tested on an
@@ -210,7 +210,7 @@ class DAQ(Instrument):
             #     self.hardware_detected = True
             # except RuntimeError:
             #     self.hardware_detected = False
-            super(DAQ, self).__init__(name, settings)
+            super(DAQold, self).__init__(name, settings)
 
     #unlike most instruments, all of the settings are sent to the DAQ on instantiation of
     #a task, such as an input or output. Thus, changing the settings only updates the internal
@@ -221,7 +221,7 @@ class DAQ(Instrument):
         Args:
             settings: a settings dictionary in the standard form
         """
-        super(DAQ, self).update(settings)
+        super(DAQold, self).update(settings)
         print('settings', settings)
         for key, value in settings.iteritems():
             if key == 'device':
@@ -812,7 +812,7 @@ class DAQ(Instrument):
             self.nidaq.DAQmxGetErrorString(err,ctypes.byref(buffer), buffer_size)
             raise RuntimeError('nidaq generated warning %d: %s'%(err,repr(buffer.value)))
 
-class NI6259(DAQ):
+class NI6259old(DAQold):
     """
     This class implements the NI6259 DAQ, which includes 32 AI, 4 AO, and 24 DI/DO channels and inherits basic
     input/output functionality from DAQ. A subset of these channels are accessible here, but more can be added up to
@@ -930,7 +930,7 @@ class NI6259(DAQ):
                   )
     ])
 
-class NI9263(DAQ):
+class NI9263old(DAQold):
     """
     This class implements the NI9263 DAQ, which includes 4 AO channels. It inherits output functionality from the DAQ
     class.

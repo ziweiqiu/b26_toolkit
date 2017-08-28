@@ -22,8 +22,8 @@ from copy import deepcopy
 import numpy as np
 
 from b26_toolkit.src.scripts import FindNV
-from b26_toolkit.src.instruments import NI6259, B26PulseBlaster, Pulse
-from b26_toolkit.src.plotting.plots_1d import plot_1d_simple_timetrace_ns, plot_pulses, update_pulse_plot, update_1d_simple
+from b26_toolkit.src.instruments import NI6259, CN041PulseBlaster, Pulse
+from b26_toolkit.src.plotting.plots_1d import plot_1d_simple_timetrace_ns, plot_1d_errbar_timetrace_ns, plot_pulses, update_pulse_plot, update_1d_simple, update_1d_errbar
 from PyLabControl.src.core.scripts import Script, Parameter
 import random
 
@@ -50,7 +50,7 @@ for a given experiment
 
     ]
 
-    _INSTRUMENTS = {'daq': NI6259, 'PB': B26PulseBlaster}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster}
 
     _SCRIPTS = {'find_nv': FindNV}
 
@@ -93,15 +93,17 @@ for a given experiment
              first value is the signal, the second (optional) value is counts in the |0> state (the maximum counts for
              normalization), and the third (optional) value is the counts in the |1> state (the minimum counts for
              normalization)
+             'shot_noise': the expected fractional error in the shot noise limit based on total counts collected
 
         '''
+
         self.sequence_index = 0
         # self.pulse_sequences, self.num_averages, tau_list, self.measurement_gate_width = self._create_pulse_sequences()
         #wrapper
 
         self.pulse_sequences, self.num_averages, tau_list, self.measurement_gate_width = self._process_sequences()
-
-        # print('number of sequences after validation ', len(self.pulse_sequences))
+        print ('good taus:')
+        print tau_list
 
         #calculates the number of daq reads per loop requested in the pulse sequence by asking how many apd reads are
         #called for. if this is not calculated properly, daq will either end too early (number too low) or hang since it
@@ -114,9 +116,10 @@ for a given experiment
         signal = [0.0]
         norms = np.repeat([0.0], (num_daq_reads - 1))
         self.count_data = np.repeat([np.append(signal, norms)], len(self.pulse_sequences), axis=0)
+        self.shot_noise = np.repeat([np.append(signal, norms)], len(self.pulse_sequences), axis=0)
 
         self.data = in_data
-        self.data.update({'tau': np.array(tau_list), 'counts': deepcopy(self.count_data)})
+        self.data.update({'tau': np.array(tau_list), 'counts': deepcopy(self.count_data), 'shot_noise': deepcopy(self.shot_noise)})
 
         #divides the total number of averages requested into a number of slices of MAX_AVERAGES_PER_SCAN and a remainer.
         #This is required because the pulseblaster won't accept more than ~4E6 loops (22 bits avaliable to store loop
@@ -131,21 +134,23 @@ for a given experiment
             #self._plot_refresh = True
 
         self.log("Averaging over {0} blocks of 1e5".format(num_1E6_avg_pb_programs))
-
+        self.nfails = [0]*len(self.pulse_sequences)
+        # print('number of sequences after validation ', len(self.pulse_sequences))
         for average_loop in range(int(num_1E6_avg_pb_programs)):
             self.log("Running average block {0} of {1}".format(average_loop+1, int(num_1E6_avg_pb_programs)))
             if self._abort:
                 break
             # print('loop ' + str(average_loop))
             self.current_averages = (average_loop + 1) * MAX_AVERAGES_PER_SCAN
-            self._run_sweep(self.pulse_sequences, MAX_AVERAGES_PER_SCAN, num_daq_reads)
+            self._run_sweep(self.pulse_sequences, MAX_AVERAGES_PER_SCAN, num_daq_reads, tau_list)
 
         if remainder != 0 and not self._abort:
             self.current_averages = self.num_averages
-            self._run_sweep(self.pulse_sequences, remainder, num_daq_reads)
+            self._run_sweep(self.pulse_sequences, remainder, num_daq_reads, tau_list)
 
         if (len(self.data['counts'][0]) == 1) and not self._abort:
             self.data['counts'] = np.array([item for sublist in self.data['counts'] for item in sublist])
+            self.data['shot_noise'] = np.array([item for sublist in self.data['shot_noise'] for item in sublist])
 
         # if self.settings['save']:
         #     self.save_b26()
@@ -173,12 +178,15 @@ for a given experiment
         if data is None:
             data = self.data
         counts = data['counts']
+        fract_noise = data['shot_noise']
         x_data = data['tau']
         axis1 = axes_list[0]
     # The following does not work for pulsedelays; you need to comment out the 'if' for it to work.
     # if counts != []:
     #     plot_1d_simple_timetrace_ns(axis1, x_data, [counts])
-        plot_1d_simple_timetrace_ns(axis1, x_data, [counts])
+
+    #     plot_1d_simple_timetrace_ns(axis1, x_data, [counts])
+        plot_1d_errbar_timetrace_ns(axis1, x_data, [counts], [fract_noise])
         axis2 = axes_list[1]
         plot_pulses(axis2, self.pulse_sequences[self.sequence_index])
 
@@ -192,15 +200,19 @@ for a given experiment
 #        if self.scripts['find_nv'].is_running:
 #            self.scripts['find_nv']._update_plot(axes_list)
 #        else:
-        counts = self.data['counts']
-        x_data = self.data['tau']
-        axis1 = axes_list[0]
-        if not counts == []:
-            update_1d_simple(axis1, x_data, [counts])
-        axis2 = axes_list[1]
-        update_pulse_plot(axis2, self.pulse_sequences[self.sequence_index])
+        if self.data is not None:
 
-    def _run_sweep(self, pulse_sequences, num_loops_sweep, num_daq_reads):
+            counts = self.data['counts']
+            fract_noise = self.data['shot_noise']
+            x_data = self.data['tau']
+            axis1 = axes_list[0]
+            if not counts == []:
+                # update_1d_simple(axis1, x_data, [counts])
+                update_1d_errbar(axis1, x_data, [counts],[fract_noise])
+            axis2 = axes_list[1]
+            update_pulse_plot(axis2, self.pulse_sequences[self.sequence_index])
+
+    def _run_sweep(self, pulse_sequences, num_loops_sweep, num_daq_reads, tau_list):
         '''
         Each pulse sequence specified in pulse_sequences is run num_loops_sweep consecutive times.
 
@@ -210,7 +222,7 @@ for a given experiment
             num_loops_sweep: number of times to repeat each sequence before moving on to the next one
             num_daq_reads: number of times the daq must read for each sequence (generally 1, 2, or 3)
 
-        Poststate: self.data['counts'] is updated with the acquired data
+        Poststate: self.data['counts'] and self.data['shot_nosie'] are updated with the acquired data
 
         '''
 
@@ -221,16 +233,28 @@ for a given experiment
         if self.settings['randomize']:
             random.shuffle(rand_indexes)
         for index, sequence in enumerate(pulse_sequences):
+
             rand_index = rand_indexes[index]
+
             if self._abort:
                 break
+
             result = self._single_sequence(pulse_sequences[rand_index], num_loops_sweep, num_daq_reads)  # keep entire array
-            self.count_data[rand_index] = self.count_data[rand_index] + result
-            counts_to_check = self._normalize_to_kCounts(np.array(result), self.measurement_gate_width, num_loops_sweep)
-            self.data['counts'][rand_index] = self._normalize_to_kCounts(self.count_data[rand_index], self.measurement_gate_width,
-                                                                    self.current_averages)
+
+            counts_temp = 0
+            if not result:
+                print('Throwing away results of sequence {}'.format(rand_index))
+                self.log('Throwing away results of sequence {}'.format(rand_index))
+                self.nfails[rand_index] += 1
+            else:
+                self.count_data[rand_index] = self.count_data[rand_index] + result
+                counts_to_check = self._normalize_to_kCounts(np.array(result), self.measurement_gate_width, num_loops_sweep)
+                self.data['counts'][rand_index] = self._normalize_to_kCounts(self.count_data[rand_index], self.measurement_gate_width, self.current_averages-self.nfails[rand_index]*MAX_AVERAGES_PER_SCAN)
+                self.data['shot_noise'][rand_index] = np.reciprocal(np.sqrt(self.count_data[rand_index]))
+                counts_temp = counts_to_check[0]
+
             self.sequence_index = rand_index
-            counts_temp = counts_to_check[0]
+
             # throw error if tracking is on and you haven't ran find nv ER 6/2/17
             if self.settings['Tracking']['on/off']:
                 if self.scripts['find_nv'].data['fluorescence']:
@@ -269,9 +293,11 @@ for a given experiment
         self.instruments['PB']['instance'].start_pulse_seq()
         result = []
         if num_daq_reads != 0:
-            result_array, _ = self.instruments['daq']['instance'].read(task)  # thread waits on DAQ getting the right number of gates
-            for i in range(num_daq_reads):
-                result.append(sum(itertools.islice(result_array, i, None, num_daq_reads)))
+            result_array, samplesPerChanRead = self.instruments['daq']['instance'].read(task)  # thread waits on DAQ getting the right number of gates
+            if samplesPerChanRead.value == int(num_loops * num_daq_reads):
+                for i in range(num_daq_reads):
+                    result.append(sum(itertools.islice(result_array, i, None, num_daq_reads)))
+
         # clean up APD tasks
         if num_daq_reads != 0:
             self.instruments['daq']['instance'].stop(task)
@@ -344,6 +370,8 @@ for a given experiment
             if not 'mw_switch_extra_time' in self.settings.keys():
                 #default to a 40 ns buffer
                 mw_switch_time = 40
+            else:
+                mw_switch_time = self.settings['mw_switch_extra_time']
             for sequence in pulse_sequences:
                 mw_switch_pulses = []
                 # add a switch pulse for each microwave pulse
@@ -352,6 +380,7 @@ for a given experiment
                         mw_switch_pulses.append(Pulse('microwave_switch', pulse.start_time - mw_switch_time,
                                                       pulse.duration + 2 * mw_switch_time))
                 # combine overlapping pulses and those that are within 2*mw_switch_extra_time
+
                 mw_switch_pulses = sorted(mw_switch_pulses, key=lambda pulse: pulse.start_time)
                 index = 0
                 while True:
@@ -369,7 +398,7 @@ for a given experiment
                     else:
                         index += 1
                 sequence.extend(mw_switch_pulses)
-
+                # print('mw switch extra time added')
             return pulse_sequences
 
         pulse_blaster = self.instruments['PB']['instance']
@@ -377,10 +406,12 @@ for a given experiment
         self.pulse_sequences = add_mw_switch_to_sequences(self.pulse_sequences) #UNCOMMENT TO ADD SWITCH
         failure_list = []
         for pulse_sequence in self.pulse_sequences:
-            overlapping_pulses = B26PulseBlaster.find_overlapping_pulses(pulse_sequence)
+            overlapping_pulses = CN041PulseBlaster.find_overlapping_pulses(pulse_sequence)
+
             if not overlapping_pulses == []:
-                failure_list.append(B26PulseBlaster.find_overlapping_pulses(pulse_sequence))
-                break
+                print('found overlapping pulses in sequence validation') # added by Ziwei 7/3/2017
+                failure_list.append(CN041PulseBlaster.find_overlapping_pulses(pulse_sequence))
+                continue
             for pulse in pulse_sequence:
                 assert pulse.start_time == 0 or pulse.start_time > 1, \
                     'found a start time that was between 0 and 1. Remember pulse times are in nanoseconds!'
@@ -395,13 +426,22 @@ for a given experiment
             assert len(pb_commands) < 4096, "Generated a number of commands too long for the pulseblaster!"
 
             short_pulses = [command for command in pb_commands if command.duration < 15]
+
+            # short_pulses = [command for command in pb_commands if command.duration < 5]
+            # edited by Ziwei 7/3/2017, change command.duration from 15 to 5 to avoid validation failure, might cause other problems
             if short_pulses:
+                print('found short pulses in sequence validation:')  # added by Ziwei 7/3/2017
+                print (short_pulses)
                 failure_list.append(short_pulses[0])
             else:
                 failure_list.append([])  # good sequence
 
         if any([isinstance(a, pulse_blaster.PBCommand) for a in failure_list]):
-            self.log('Validation failed. At least one pulse in the sequence is invalid.')
+            self.log('Validation failed! At least one pulse in the sequence is invalid.')
+            failure_list_int = [int(not fl) for fl in failure_list]
+
+            self.log(failure_list_int)
+            self.log('{:} sequences good out of {:}'.format(sum(failure_list_int),len(failure_list_int)))
 
         return self.pulse_sequences, num_averages, tau_list, measurement_gate_width, failure_list
 
@@ -434,7 +474,10 @@ for a given experiment
             for index in delete_list:
                 pulse_sequences.pop(index)
 
+        # print('delete taus from list:')
+        # print(delete_list)
         tau_list = np.delete(np.array(tau_list), delete_list).tolist()
+
 
         return pulse_sequences, num_averages, tau_list, measurement_gate_width
 

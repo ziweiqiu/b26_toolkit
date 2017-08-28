@@ -25,11 +25,12 @@ from matplotlib import patches
 from b26_toolkit.src.plotting.plots_2d import plot_fluorescence_new
 from PyLabControl.src.core import Script, Parameter
 from b26_toolkit.src.scripts import GalvoScan, SetLaser
+from b26_toolkit.src.instruments import CN041PulseBlaster
 
 class FindNV(Script):
     """
 GalvoScan uses the apd, daq, and galvo to sweep across voltages while counting photons at each voltage,
-resulting in an image in the current field of view of the objective.
+resulting in an image in the current field of view of the objective. new
 
 Known issues:
     1.) if fits are poor, check  sweep_range. It should extend significantly beyond end of NV on both sides.
@@ -40,21 +41,23 @@ Known issues:
                   [Parameter('x', 0, float, 'x-coordinate'),
                    Parameter('y', 0, float, 'y-coordinate')
                    ]),
-        Parameter('sweep_range', .03, float, 'voltage range to sweep over to find a max'),
+        Parameter('sweep_range', .12, float, 'voltage range to sweep over to find a max'),
         Parameter('num_points', 61, int, 'number of points to sweep in the sweep range'),
         Parameter('nv_size', 11, int, 'TEMP: size of nv in pixels - need to be refined!!'),
         Parameter('min_mass', 180, int, 'TEMP: brightness of nv - need to be refined!!'),
         Parameter('number_of_attempts', 1, int, 'Number of times to decrease min_mass if an NV is not found'),
-        Parameter('center_on_current_location', False, bool, 'Check to use current galvo location rather than ')
+        Parameter('center_on_current_location', True, bool, 'Check to use current galvo location'),
+        Parameter('laser_off_after', True, bool, 'if true laser is turned off after the measurement')
     ]
 
-    _INSTRUMENTS = {}
+    _INSTRUMENTS = {'PB': CN041PulseBlaster}
+    # _INSTRUMENTS = {}
 
     _SCRIPTS = {'take_image': GalvoScan, 'set_laser': SetLaser}
 
-    def __init__(self, scripts, name = None, settings = None, log_function = None, timeout = 1000000000, data_path = None):
+    def __init__(self, scripts, name = None, settings = None, instruments=None, log_function = None, timeout = 1000000000, data_path = None):
 
-        Script.__init__(self, name, scripts = scripts, settings=settings, log_function=log_function, data_path = data_path)
+        Script.__init__(self, name, scripts = scripts, settings=settings, instruments = instruments, log_function=log_function, data_path = data_path)
 
     def _function(self):
         """
@@ -62,8 +65,10 @@ Known issues:
         will be overwritten in the __init__
         """
 
+        # LASER ON:
+        self.instruments['PB']['instance'].update({'laser': {'status': True}})
+
         attempt_num = 1
-        print(self.scripts['take_image'].instruments)
         if self.settings['center_on_current_location']:
             # fixed for cold setup and new DAQ ER 6/4/17
             #daq_pt = self.scripts['take_image'].instruments['daq']['instance'].get_analog_voltages([self.scripts['take_image'].settings['DAQ_channels']['x_ao_channel'], self.scripts['take_image'].settings['DAQ_channels']['y_ao_channel']])
@@ -126,12 +131,16 @@ Known issues:
                 # all the points that have been identified as valid NV centers
                 pts = [pixel_to_voltage(p, self.data['extent'], np.shape(self.data['image_data'])) for p in
                        locate_info[['x', 'y']].as_matrix()]
-                #print(pts)
+                self.log('Found {:d} NV(s).'.format(len(pts)))
                 if len(pts) > 1:
                     self.log('FindNV found more than one NV in the scan image. Selecting the one closest to initial point.')
+                if self.settings['laser_off_after']:
+                    self.log('Laser is off.')
                 # pick the one that is closest to the original one
                 pm = pts[np.argmin(np.array([np.linalg.norm(p - np.array(po)) for p in pts]))]
                 self.data['maximum_point'] = {'x': float(pm[0]), 'y': float(pm[1])}
+                # print the location of the NV
+                self.log('NV position: x={:f} , y={:f}'.format(float(pm[0]),float(pm[1])))
                 counter = 0
                 for p in pts: # record maximum counts = fluorescence
                     if p[1] == self.data['maximum_point']['y']:
@@ -145,12 +154,18 @@ Known issues:
                 min_mass = min_mass_adjustment(min_mass)
                 attempt_num += 1
             else:
-                self.log('FindNV did not find an NV --- setting laser to initial point instead, setting fluorescence to zero')
+                self.log('FindNV did not find an NV --- setting laser to initial point instead, setting fluorescence to zero.')
+                if self.settings['laser_off_after']:
+                    self.log('Laser is off.')
                 self.data['fluorescence'] = 0.0
                 break
 
         self.scripts['set_laser'].settings['point'].update(self.data['maximum_point'])
         self.scripts['set_laser'].run()
+
+        # LASER OFF if desired:\
+        if self.settings['laser_off_after']:
+            self.instruments['PB']['instance'].update({'laser': {'status': False}})
 
 
     @staticmethod

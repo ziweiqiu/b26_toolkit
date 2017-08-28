@@ -24,6 +24,7 @@ from b26_toolkit.src.instruments import NI6259
 from b26_toolkit.src.plotting.plots_2d_CN041 import plot_fluorescence_new, update_fluorescence
 from PyLabControl.src.core import Script, Parameter
 from b26_toolkit.src.plotting.plots_1d import plot_counts
+from b26_toolkit.src.instruments import CN041PulseBlaster
 
 
 class ConfocalScan(Script):
@@ -31,14 +32,14 @@ class ConfocalScan(Script):
     _DEFAULT_SETTINGS = [
         Parameter('scan_axes', 'xy', ['xy','xz','yz','x','y','z'],'Choose 2D or 1D confocal scan to perform'),
         Parameter('point_a',
-                  [Parameter('x', 0, float, 'x-coordinate [$\mu$m]'),
-                   Parameter('y', 0, float, 'y-coordinate [$\mu$m]'),
-                   Parameter('z', 5, float, 'z-coordinate [$\mu$m]')
+                  [Parameter('x', 0, float, 'x-coordinate [V]'),
+                   Parameter('y', 0, float, 'y-coordinate [V]'),
+                   Parameter('z', 5, float, 'z-coordinate [V]')
                    ]),
         Parameter('point_b',
-                  [Parameter('x', 10.0, float, 'x-coordinate'),
-                   Parameter('y', 10.0, float, 'y-coordinate'),
-                   Parameter('z', 10.0, float, 'z-coordinate')
+                  [Parameter('x', 10.0, float, 'x-coordinate [V]'),
+                   Parameter('y', 10.0, float, 'y-coordinate [V]'),
+                   Parameter('z', 10.0, float, 'z-coordinate [V]')
                    ]),
         Parameter('RoI_mode', 'center', ['corner', 'center'], 'mode to calculate region of interest.\n \
                                                            corner: pta and ptb are diagonal corners of rectangle.\n \
@@ -56,8 +57,8 @@ class ConfocalScan(Script):
                   [Parameter('galvo', .0005, [.0005, .001, .002], 'wait time between points to allow galvo to settle'),
                    Parameter('z-piezo', .25, [.25], 'settle time for objective z-motion (measured for oil objective to be ~10ms, in reality appears to be much longer)'),
                    ]),
-        Parameter('min_counts_plot', -1, int, 'Rescales colorbar with this as the maximum counts on replotting'),
-        Parameter('max_counts_plot', -1, int, 'Rescales colorbar with this as the minimum counts on replotting'),
+        Parameter('min_counts_plot', -1, int, 'Rescales colorbar with this as the minimum counts on replotting'),
+        Parameter('max_counts_plot', -1, int, 'Rescales colorbar with this as the maximum counts on replotting'),
         Parameter('DAQ_channels',
                    [Parameter('x_ao_channel', 'ao0', ['ao0', 'ao1', 'ao2', 'ao3'], 'Daq channel used for x voltage analog output'),
                     Parameter('y_ao_channel', 'ao1', ['ao0', 'ao1', 'ao2', 'ao3'], 'Daq channel used for y voltage analog output'),
@@ -69,7 +70,8 @@ class ConfocalScan(Script):
     ]
 
     # _INSTRUMENTS = {'NI6259':  NI6259, 'NI9263': NI9263, 'NI9402': NI9402}
-    _INSTRUMENTS = {'NI6259':  NI6259}
+    _INSTRUMENTS = {'NI6259':  NI6259, 'PB': CN041PulseBlaster}
+
 
     _SCRIPTS = {}
 
@@ -106,6 +108,11 @@ class ConfocalScan(Script):
 
         # self._plotting = True
 
+
+        # turn laser on
+        self.instruments['PB']['instance'].update({'laser': {'status': True}})# turn laser on
+        self.instruments['PB']['instance'].update({'laser': {'status': True}})
+
         def scan2D():
             self._recording = False
 
@@ -118,7 +125,8 @@ class ConfocalScan(Script):
             self.var2_array = np.linspace(self.var2range[0], self.var2range[1], self.settings['num_points'][self.var2], endpoint=True)
 
             self.data = {'image_data': np.zeros((self.settings['num_points'][self.var2], self.settings['num_points'][self.var1])),
-                         'bounds': [self.var1range[0], self.var1range[1], self.var2range[0], self.var2range[1]]}
+                         'bounds': [self.var1range[0], self.var1range[1], self.var2range[0], self.var2range[1]],
+                         'varinitialpos': self.varinitialpos}
             self.data['extent'] = [self.var1range[0], self.var1range[1], self.var2range[1], self.var2range[0]]
             # self.data['varcalib'] = [self.settings['um_per_V'][self.var1],self.settings['um_per_V'][self.var1]]
             # self.data['varlbls'] = [self.var1 + ' [$\mu$m]',self.var2 + ' [$\mu$m]']
@@ -159,10 +167,13 @@ class ConfocalScan(Script):
 
                 summedData = np.zeros(len(self.var1_array) / self.clockAdjust)
                 for i in range(0, int((len(self.var1_array) / self.clockAdjust))):
-                    summedData[i] = np.sum(
-                        diffData[(i * self.clockAdjust + 1):(i * self.clockAdjust + self.clockAdjust - 1)])
+                    pxarray = diffData[(i * self.clockAdjust + 1):(i * self.clockAdjust + self.clockAdjust - 1)]
+                    normalization = len(pxarray) / self.sample_rate / 0.001
+                    summedData[i] = np.sum(pxarray)/normalization
+
                 # also normalizing to kcounts/sec
-                self.data['image_data'][var2Num] = summedData * (.001 / self.settings['time_per_pt']['galvo'])
+                # self.data['image_data'][var2Num] = summedData * (.001 / self.settings['time_per_pt']['galvo'])
+                self.data['image_data'][var2Num] = summedData
 
                 self.progress = float(var2Num + 1) / len(self.var2_array) * 100
                 self.updateProgress.emit(int(self.progress))
@@ -176,7 +187,8 @@ class ConfocalScan(Script):
                 np.linspace(self.var1range[0], self.var1range[1], self.settings['num_points'][self.var1],endpoint=True),self.clockAdjust)
             # self.var2_array = np.linspace(self.var2range[0], self.var2range[1], self.settings['num_points'][self.var2], endpoint=True)
             self.data = {'image_data': np.zeros(self.settings['num_points'][self.var1]),
-                         'bounds': [self.var1range[0], self.var1range[1]]}
+                         'bounds': [self.var1range[0], self.var1range[1]],
+                         'varinitialpos': self.varinitialpos}
             self.data['varlbls'] = self.var1 + ' [V]'
 
             while True:
@@ -202,10 +214,13 @@ class ConfocalScan(Script):
 
                 summedData = np.zeros(len(self.var1_array) / self.clockAdjust)
                 for i in range(0, int((len(self.var1_array) / self.clockAdjust))):
-                    summedData[i] = np.sum(
-                        diffData[(i * self.clockAdjust + 1):(i * self.clockAdjust + self.clockAdjust - 1)])
+                    pxarray = diffData[(i * self.clockAdjust + 1):(i * self.clockAdjust + self.clockAdjust - 1)]
+                    normalization = len(pxarray) / self.sample_rate / 0.001
+                    summedData[i] = np.sum(pxarray)/normalization
                 # also normalizing to kcounts/sec
-                self.data['image_data'] = summedData * (.001 / self.settings['time_per_pt']['galvo'])
+                # self.data['image_data'] = summedData * (.001 / self.settings['time_per_pt']['galvo'])
+
+                self.data['image_data'] = summedData
 
                 self.progress = 50.
                 self.updateProgress.emit(int(self.progress))
@@ -217,7 +232,8 @@ class ConfocalScan(Script):
             self.var1_array = np.linspace(self.var1range[0], self.var1range[1], self.settings['num_points'][self.var1], endpoint=True)
 
             self.data = {'image_data': np.zeros((self.settings['num_points'][self.var1])),
-                         'bounds': [self.var1range[0], self.var1range[1]]}
+                         'bounds': [self.var1range[0], self.var1range[1]],
+                         'varinitialpos': self.varinitialpos}
             self.data['varlbls'] = self.var1 + ' [V]'
 
             # objective takes longer to settle after a big jump, so give it time before starting scan:
@@ -241,7 +257,9 @@ class ConfocalScan(Script):
                 diffData = np.diff(samparray)
 
                 # sum and normalize to kcounts/sec
-                self.data['image_data'][var1Num] = np.sum(diffData) * (.001 / self.settings['time_per_pt']['z-piezo'])
+                # self.data['image_data'][var1Num] = np.sum(diffData) * (.001 / self.settings['time_per_pt']['z-piezo'])
+                normalization = len(diffData) / self.sample_rate / 0.001
+                self.data['image_data'][var1Num] = np.sum(diffData) / normalization
 
                 self.progress = float(var1Num + 1) / len(self.var1_array) * 100
                 self.updateProgress.emit(int(self.progress))
@@ -317,6 +335,11 @@ class ConfocalScan(Script):
             {self.settings['DAQ_channels']['x_ao_channel']: initial_position[0],
             self.settings['DAQ_channels']['y_ao_channel']: initial_position[1],
             self.settings['DAQ_channels']['z_ao_channel']: initial_position[2]})
+
+        # turn laser off
+        self.instruments['PB']['instance'].update({'laser': {'status': False}})
+        self.log('Laser is off.')
+
 
     def get_confocal_location(self):
         """
@@ -399,10 +422,10 @@ class ConfocalScan(Script):
         """
         if data is None:
             data = self.data
-        # plot_fluorescence_new(data['image_data'], data['extent'], self.data['varcalib'], self.data['varlbls'], self.varinitialpos, axes_list[0], min_counts=self.settings['min_counts_plot'], max_counts=self.settings['max_counts_plot'])
+        # plot_fluorescence_new(data['image_data'], data['extent'], self.data['varcalib'], self.data['varlbls'], self.data['varinitialpos'], axes_list[0], min_counts=self.settings['min_counts_plot'], max_counts=self.settings['max_counts_plot'])
 
         if np.ndim(data['image_data'])==2:
-            plot_fluorescence_new(data['image_data'], data['extent'], self.data['varlbls'], self.varinitialpos, axes_list[0], min_counts=self.settings['min_counts_plot'], max_counts=self.settings['max_counts_plot'])
+            plot_fluorescence_new(data['image_data'], data['extent'], self.data['varlbls'], self.data['varinitialpos'], axes_list[0], min_counts=self.settings['min_counts_plot'], max_counts=self.settings['max_counts_plot'])
         elif np.ndim(data['image_data'])==1:
             plot_counts(axes_list[0], data['image_data'],np.linspace(data['bounds'][0],data['bounds'][1],len(data['image_data'])),data['varlbls'])
 
