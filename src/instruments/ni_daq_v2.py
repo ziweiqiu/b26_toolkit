@@ -444,6 +444,7 @@ class DAQ(Instrument):
     # read sampleNum previously generated values from a buffer, and return the
     # corresponding 1D array of ctypes.c_double values
     def read_counter(self, task_name):
+        counterTimeOut = 50;
         """
         read sampleNum previously generated values from a buffer, and return the
         corresponding 1D array of ctypes.c_double values
@@ -465,13 +466,25 @@ class DAQ(Instrument):
         data = (float64 * task['sample_num'])()
         samplesPerChanRead = int32()
 
-
-        self._check_error(self.nidaq.DAQmxReadCounterF64(task_handle_ctr,
-                                                         int32(task['num_samples_per_channel']), float64(-1),
+        # AB 08/02/2017: changed DAQmxReadCounterF64 timeout from infinity (-1) to 10s to prevent freezes
+        self._check_error_and_skip(self.nidaq.DAQmxReadCounterF64(task_handle_ctr,
+                                                         int32(task['num_samples_per_channel']), float64(counterTimeOut),
                                                          ctypes.byref(data),
                                                          uInt32(task['sample_num']),
                                                          ctypes.byref(samplesPerChanRead),
                                                          None))
+        # self._check_error(self.nidaq.DAQmxReadCounterF64(task_handle_ctr,
+        #                                                  int32(task['num_samples_per_channel']), float64(-1),
+        #                                                  ctypes.byref(data),
+        #                                                  uInt32(task['sample_num']),
+        #                                                  ctypes.byref(samplesPerChanRead),
+        #                                                  None))
+
+        if samplesPerChanRead.value != task['num_samples_per_channel']:
+            print('DAQ counter: read only {:} samples out of {:} expected'.format(samplesPerChanRead.value, task['num_samples_per_channel']))
+        # print('AB08012017: DAQmxReadCounterF64 execution attempting to read {:} samples'.format(task['num_samples_per_channel']))
+        # print('........... into array of size {:} samples'.format(task['sample_num']))
+        # print('........... samples actually read = {:} samples'.format(samplesPerChanRead))
 
         return data, samplesPerChanRead
 
@@ -854,6 +867,26 @@ class DAQ(Instrument):
             self.nidaq.DAQmxGetErrorString(err, ctypes.byref(buffer), buffer_size)
             raise RuntimeError('nidaq generated warning %d: %s' % (err, repr(buffer.value)))
 
+    def _check_error_and_skip(self, err):
+        """
+        Error Checking Routine for DAQmx functions. Pass in the returned values form DAQmx functions (the errors) to get
+        an error description. Instead of raising a runtime error, allow to proceed anyway.
+        Args:
+            err: 32-it integer error from an NI-DAQmx function
+
+        Returns: a verbose description of the error taken from the nidaq dll
+
+        """
+        if err < 0:
+            buffer_size = 1000
+            buffer = ctypes.create_string_buffer('\000' * buffer_size)
+            self.nidaq.DAQmxGetExtendedErrorInfo(ctypes.byref(buffer), buffer_size)
+            print('nidaq call failed with error %d: %s' % (err, buffer.value))
+        if err > 0:
+            buffer_size = 1000
+            buffer = ctypes.create_string_buffer('\000' * buffer_size)
+            self.nidaq.DAQmxGetErrorString(err, ctypes.byref(buffer), buffer_size)
+            print('nidaq generated warning %d: %s' % (err, repr(buffer.value)))
 
 class NI6259(DAQ):
     """

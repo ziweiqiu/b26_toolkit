@@ -194,7 +194,7 @@ Autofocus: Takes images at different piezo voltages and uses a heuristic to figu
 
         piezo_voltage, self.data['fit_parameters'] = self.fit_focus()
 
-        self.log('autofocus fit result: {:s} V'.format(str(piezo_voltage)))
+        self.log('autofocus fit result: z = {:s} V'.format(str(piezo_voltage)))
 
         self._step_piezo(piezo_voltage, self.settings['wait_time'])
 
@@ -279,6 +279,7 @@ Autofocus: Takes images at different piezo voltages and uses a heuristic to figu
 
     def _plot(self, axes_list, data = None):
         # fit the data and set piezo to focus spot
+
         if data is None:
             data  = self.data
         axis_focus, axis_image = axes_list
@@ -324,7 +325,7 @@ Autofocus: Takes images at different piezo voltages and uses a heuristic to figu
 
     def _update_plot(self, axes_list):
         # fit the data and set piezo to focus spot
-
+        print('updating autofocus plot')
         axis_focus, axis_image = axes_list
 
         # if take image is running we take the data from there otherwise we use the scripts own image data

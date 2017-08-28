@@ -18,16 +18,22 @@
 
 from PyLabControl.src.core import Script, Parameter
 from b26_toolkit.src.scripts import ESR
-from b26_toolkit.src.scripts.pulse_blaster_scripts_CN041 import Rabi, DEER
+from b26_toolkit.src.scripts.pulse_blaster_scripts_CN041 import Rabi, DEER_XYn
 import numpy as np
 
 
-class EsrRabiDeer(Script):
+class EsrRabiDeerXYn(Script):
     """
     Does both an ESR experiment and a Rabi experiment on an NV, using the reference frequency from the esr data.
     """
 
     _DEFAULT_SETTINGS = [
+        Parameter('DEER_decoupling_seq', [
+            Parameter('type', 'spin_echo', ['spin_echo', 'XY4', 'XY8', 'CPMG4'],
+                      'type of dynamical decoupling sequences'),
+            Parameter('num_of_pulse_blocks', 1, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                      'number of alternating x-y-y-x pulses. spin_echo always has 1 block.')
+        ]),
         Parameter('DEER_spectrum', [
             Parameter('RF_center_freq', 250e6, float, 'RF carrier frequency for dark spin [Hz]'),
             Parameter('do_RF_freq_sweep', True, bool, 'check if taking a DEER spectrum by varying RF carrier frequency'),
@@ -44,7 +50,7 @@ class EsrRabiDeer(Script):
 
     _INSTRUMENTS = {}
 
-    _SCRIPTS = {'esr': ESR, 'rabi': Rabi, 'deer':DEER}
+    _SCRIPTS = {'esr': ESR, 'rabi': Rabi, 'deer':DEER_XYn}
 
     def __init__(self, scripts, name = None, settings = None, log_function = None, timeout = 1000000000, data_path = None):
 
@@ -92,6 +98,8 @@ class EsrRabiDeer(Script):
                         self.scripts['deer'].settings['mw_pulses']['pi_half_pulse_time'] = float(self.pi_half_time)
                         self.scripts['deer'].settings['mw_pulses']['pi_pulse_time'] = float(self.pi_time)
                         self.scripts['deer'].settings['mw_pulses']['3pi_half_pulse_time'] = float(self.three_pi_half_time)
+                        self.scripts['deer'].settings['decoupling_seq']['type'] = self.settings['DEER_decoupling_seq']['type']
+                        self.scripts['deer'].settings['decoupling_seq']['num_of_pulse_blocks'] = self.settings['DEER_decoupling_seq']['num_of_pulse_blocks']
 
                         # tag before staring deer sweeps:
                         base_tag_deer = self.scripts['deer'].settings['tag']

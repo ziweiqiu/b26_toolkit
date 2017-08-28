@@ -22,6 +22,7 @@ from collections import deque
 from b26_toolkit.src.instruments import NI6259
 from b26_toolkit.src.plotting.plots_1d import plot_counts
 from PyLabControl.src.core import Parameter, Script
+from b26_toolkit.src.instruments import CN041PulseBlaster
 
 
 class Daq_Read_Counter(Script):
@@ -33,7 +34,7 @@ This script reads the Counter input from the DAQ and plots it.
         Parameter('counter_channel', 'ctr0', ['ctr0', 'ctr1'], 'Daq channel used for counter')
     ]
 
-    _INSTRUMENTS = {'daq': NI6259}
+    _INSTRUMENTS = {'daq': NI6259, 'PB': CN041PulseBlaster}
 
     _SCRIPTS = {
 
@@ -57,6 +58,8 @@ This script reads the Counter input from the DAQ and plots it.
         This is the actual function that will be executed. It uses only information that is provided in the settings property
         will be overwritten in the __init__
         """
+        # turn laser on
+        self.instruments['PB']['instance'].update({'laser': {'status': True}})
 
         sample_rate = float(1) / self.settings['integration_time']
         normalization = self.settings['integration_time']/.001
@@ -104,6 +107,10 @@ This script reads the Counter input from the DAQ and plots it.
 
         # clean up APD tasks
         self.instruments['daq']['instance'].stop(task)
+
+        # turn laser off
+        self.instruments['PB']['instance'].update({'laser': {'status': False}})
+        self.log('Laser is off.')
 
     def plot(self, figure_list):
         # COMMENT_ME

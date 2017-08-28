@@ -24,6 +24,7 @@ from b26_toolkit.src.instruments import NI6259
 from b26_toolkit.src.plotting.plots_2d_CN041 import plot_fluorescence_new, update_fluorescence
 from PyLabControl.src.core import Script, Parameter
 from b26_toolkit.src.plotting.plots_1d import plot_counts
+from b26_toolkit.src.instruments import CN041PulseBlaster
 
 
 class ConfocalScan(Script):
@@ -56,8 +57,8 @@ class ConfocalScan(Script):
                   [Parameter('galvo', .0005, [.0005, .001, .002], 'wait time between points to allow galvo to settle'),
                    Parameter('z-piezo', .25, [.25], 'settle time for objective z-motion (measured for oil objective to be ~10ms, in reality appears to be much longer)'),
                    ]),
-        Parameter('min_counts_plot', -1, int, 'Rescales colorbar with this as the maximum counts on replotting'),
-        Parameter('max_counts_plot', -1, int, 'Rescales colorbar with this as the minimum counts on replotting'),
+        Parameter('min_counts_plot', -1, int, 'Rescales colorbar with this as the minimum counts on replotting'),
+        Parameter('max_counts_plot', -1, int, 'Rescales colorbar with this as the maximum counts on replotting'),
         Parameter('DAQ_channels',
                    [Parameter('x_ao_channel', 'ao0', ['ao0', 'ao1', 'ao2', 'ao3'], 'Daq channel used for x voltage analog output'),
                     Parameter('y_ao_channel', 'ao1', ['ao0', 'ao1', 'ao2', 'ao3'], 'Daq channel used for y voltage analog output'),
@@ -69,7 +70,8 @@ class ConfocalScan(Script):
     ]
 
     # _INSTRUMENTS = {'NI6259':  NI6259, 'NI9263': NI9263, 'NI9402': NI9402}
-    _INSTRUMENTS = {'NI6259':  NI6259}
+    _INSTRUMENTS = {'NI6259':  NI6259, 'PB': CN041PulseBlaster}
+
 
     _SCRIPTS = {}
 
@@ -105,6 +107,11 @@ class ConfocalScan(Script):
         # self._plot_refresh = True
 
         # self._plotting = True
+
+
+        # turn laser on
+        self.instruments['PB']['instance'].update({'laser': {'status': True}})# turn laser on
+        self.instruments['PB']['instance'].update({'laser': {'status': True}})
 
         def scan2D():
             self._recording = False
@@ -328,6 +335,11 @@ class ConfocalScan(Script):
             {self.settings['DAQ_channels']['x_ao_channel']: initial_position[0],
             self.settings['DAQ_channels']['y_ao_channel']: initial_position[1],
             self.settings['DAQ_channels']['z_ao_channel']: initial_position[2]})
+
+        # turn laser off
+        self.instruments['PB']['instance'].update({'laser': {'status': False}})
+        self.log('Laser is off.')
+
 
     def get_confocal_location(self):
         """

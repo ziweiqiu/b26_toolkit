@@ -261,7 +261,9 @@ def fit_esr(freq, ampl, strain_filtering=False, verbose = False):
     # check if scanning full range for two peaks or half range for one peak
     if max(freq) < F0:
         start_vals = get_lorentzian_fit_starting_values(freq, ampl)
-        start_vals[2] = freq_peaks[0]
+        # start_vals = [constant_offset, amplitude, center, fwhm]
+        # start_vals[2] = freq_peaks[0]
+        # print(start_vals)
         try:
 
             if verbose:

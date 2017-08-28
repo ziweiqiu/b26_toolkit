@@ -21,7 +21,7 @@ import numpy as np
 from b26_toolkit.src.instruments import NI6259
 from b26_toolkit.src.plotting.plots_2d import plot_fluorescence_new, update_fluorescence
 from PyLabControl.src.core import Script, Parameter
-
+from b26_toolkit.src.instruments import CN041PulseBlaster
 
 class GalvoScan(Script):
     """
@@ -56,7 +56,7 @@ class GalvoScan(Script):
         Parameter('ending_behavior', 'return_to_start', ['return_to_start', 'return_to_origin', 'leave_at_corner'], 'return to the corn')
     ]
 
-    _INSTRUMENTS = {'daq':  NI6259}
+    _INSTRUMENTS = {'daq':  NI6259, 'PB': CN041PulseBlaster}
 
     _SCRIPTS = {}
 
@@ -84,6 +84,9 @@ class GalvoScan(Script):
         # self._plot_refresh = True
 
         # self._plotting = True
+
+        # turn laser on
+        self.instruments['PB']['instance'].update({'laser': {'status': True}})
 
         def init_scan():
             self._recording = False
@@ -174,6 +177,10 @@ class GalvoScan(Script):
         # self.instruments['daq']['instance'].AO_run()
         # self.instruments['daq']['instance'].AO_waitToFinish()
         # self.instruments['daq']['instance'].AO_stop()
+
+        # turn laser off
+        self.instruments['PB']['instance'].update({'laser': {'status': False}})
+        self.log('Laser is off.')
 
     def get_galvo_location(self):
         """

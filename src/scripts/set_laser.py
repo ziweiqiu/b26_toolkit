@@ -33,6 +33,7 @@ This script points the laser to a point
                   [Parameter('x', 0, float, 'x-coordinate'),
                    Parameter('y', 0, float, 'y-coordinate')
                    ]),
+        Parameter('patch_size', 0.05, [0.005, 0.05, 0.5], 'size of the red circle'),
         Parameter('DAQ_channels',
             [Parameter('x_ao_channel', 'ao0', ['ao0', 'ao1', 'ao2', 'ao3'], 'Daq channel used for x voltage analog output'),
             Parameter('y_ao_channel', 'ao1', ['ao0', 'ao1', 'ao2', 'ao3'], 'Daq channel used for y voltage analog output')
@@ -82,7 +83,7 @@ This script points the laser to a point
         # removes patches
         [child.remove() for child in axes_Image.get_children() if isinstance(child, patches.Circle)]
 
-        patch = patches.Circle((self.settings['point']['x'], self.settings['point']['y']), .0005, fc='r')
+        patch = patches.Circle((self.settings['point']['x'], self.settings['point']['y']), self.settings['patch_size'], fc='y')
         axes_Image.add_patch(patch)
 
 # class SetLaser_cDAQ(SetLaser):

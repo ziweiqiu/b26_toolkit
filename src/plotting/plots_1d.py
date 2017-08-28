@@ -102,7 +102,6 @@ def plot_esr(axes, frequency, counts, fit_params=None, plot_marker_data = 'b', p
     axes.hold(False)
     # return lines
 
-
 def plot_pulses(axis, pulse_collection, pulse_colors=None):
     """
     creates a visualization of pulses (in pulse_collection) on a matplotlib axis (axis)
@@ -338,8 +337,84 @@ def update_1d_simple(axis, times, counts_list):
     # if len(axis.lines) != len(counts_list):
     #     print('UUUUUU axes.lines:', len(axis.lines), 'len counts:', len(counts_list))
 
+    # print('PRINTING lenghts:')
+    # print(len(axis.lines))
+    # print(len(counts_list))
+
     assert len(axis.lines) == len(counts_list)
     for index, counts in enumerate(counts_list):
         axis.lines[index].set_ydata(counts)
     axis.relim()
     axis.autoscale_view()
+
+
+def plot_1d_errbar_timetrace_ns(axis, times, data_list, err_list, y_label='kCounts/sec', title=None):
+    """
+    plots a time trace for a list of data assuming that the times are give in ns
+    Args:
+        axis: axis object on which to plot
+        times: times in ns (list or array of length N)
+        data_list: list of data (size MxN)
+        y_label: (optional) label for y axis
+        title:  (optional) title
+
+    """
+
+    times = 1.*np.array(times) # cast onto numpy in case we got a list, which breaks some of the commands below
+
+    if max(times) < 1e3:
+        x_label = 'time [ns]'
+    elif max(times) < 1e6:
+        x_label = 'time [us]'
+        times *= 1e-3
+    elif max(times) < 1e9:
+        x_label = 'time [ms]'
+        times *= 1e-6
+    elif max(times) < 1e12:
+        x_label = 'time [s]'
+        times *= 1e-9
+
+
+    for index, counts in enumerate(data_list):
+        for index2, counts_subarray in enumerate(np.transpose(counts)):
+            err_subarray = np.transpose(err_list[index])
+            axis.errorbar(times, counts_subarray, counts_subarray*err_subarray[index2])
+            axis.hold(True)
+
+    axis.hold(False)
+
+    axis.set_xlabel(x_label)
+    axis.set_ylabel(y_label)
+    if title:
+        axis.set_title(title)
+    axis.set_xlim([min(times), max(times)])
+
+
+def update_1d_errbar(axis, times, counts_list, err_list):
+    """
+
+    Args:
+        axis: axes object
+        times: JG: THIS IS NOT USED! WHAT IS IT? => add comment, e.g. for future purpose or delete!
+        counts_list: list of
+
+    Returns:
+
+    """
+
+    # if len(np.shape(counts_list)) == 1:
+    #     counts_list = [counts_list]
+    # if len(np.shape(err_list)) == 1:
+    #     err_list = [err_list]
+    # if len(axis.lines) != len(counts_list):
+    #     counts_list = np.transpose(counts_list)
+    # if len(axis.lines) != len(err_list):
+    #     err_list = np.transpose(err_list)
+
+    plot_1d_errbar_timetrace_ns(axis, times, counts_list, err_list)
+
+    # assert len(axis.lines) == len(counts_list)
+    # for index, counts in enumerate(counts_list):
+    #     axis.lines[index].set_ydata(counts)
+    # axis.relim()
+    # axis.autoscale_view()

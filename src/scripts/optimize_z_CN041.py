@@ -23,6 +23,7 @@ from PyLabControl.src.core import Script, Parameter
 from b26_toolkit.src.plotting.plots_1d import plot_counts
 from b26_toolkit.src.scripts.confocal_scan_CN041 import ConfocalScan
 from b26_toolkit.src.scripts.set_confocal_CN041 import SetConfocal
+from b26_toolkit.src.instruments import CN041PulseBlaster
 
 class optimizeZ(Script):
 
@@ -31,18 +32,22 @@ class optimizeZ(Script):
         Parameter('num_points', 50, int, 'number of z points to scan'),
         Parameter('time_per_pt', .5, [.25, .5, 1.], 'time in s to measure at each point for 1D z-scans only')]
 
-    _INSTRUMENTS = {}
+    _INSTRUMENTS = {'PB': CN041PulseBlaster}
+    # _INSTRUMENTS = {}
 
     _SCRIPTS = {'scan_z': ConfocalScan, 'set_focus': SetConfocal}
 
-    def __init__(self, scripts, name = None, settings = None, log_function = None, timeout = 1000000000, data_path = None):
+    def __init__(self, scripts, name = None, settings = None, instruments=None, log_function = None, timeout = 1000000000, data_path = None):
 
-        Script.__init__(self, name, scripts = scripts, settings=settings, log_function=log_function, data_path = data_path)
+        Script.__init__(self, name, scripts = scripts, settings=settings, instruments = instruments, log_function=log_function, data_path = data_path)
 
         self.scripts['scan_z'].update({'scan_axes': 'z'})
         self.scripts['scan_z'].update({'RoI_mode': 'center'})
 
     def _function(self):
+
+        # turn laser on
+        self.instruments['PB']['instance'].update({'laser': {'status': True}})
 
         initial_point = self.scripts['scan_z'].instruments['NI6259']['instance'].get_analog_voltages([self.scripts['scan_z'].settings['DAQ_channels']['x_ao_channel'],self.scripts['scan_z'].settings['DAQ_channels']['y_ao_channel'],self.scripts['scan_z'].settings['DAQ_channels']['z_ao_channel']])
 
@@ -67,6 +72,11 @@ class optimizeZ(Script):
 
         self.scripts['set_focus'].settings['point'].update({'x': initial_point[0], 'y': initial_point[1], 'z': self.data['maximum_point']})
         self.scripts['set_focus'].run()
+
+        self.log('set z = {:f}'.format(self.data['maximum_point']))
+        # turn laser off
+        self.instruments['PB']['instance'].update({'laser': {'status': False}})
+        self.log('Laser is off.')
 
     @staticmethod
     def plot_data(axes_list, data):

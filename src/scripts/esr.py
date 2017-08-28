@@ -34,12 +34,12 @@ class ESR(Script):
     """
 
     _DEFAULT_SETTINGS = [
-        Parameter('power_out', -45.0, float, 'output power (dBm)'),
+        Parameter('power_out', 3, float, 'output power (dBm)'),
         Parameter('esr_avg', 50, int, 'number of esr averages'),
-        Parameter('freq_start', 2.82e9, float, 'start frequency of scan'),
-        Parameter('freq_stop', 2.92e9, float, 'end frequency of scan'),
-        Parameter('range_type', 'start_stop', ['start_stop', 'center_range'], 'start_stop: freq. range from freq_start to freq_stop. center_range: centered at freq_start and width freq_stop'),
-        Parameter('freq_points', 100, int, 'number of frequencies in scan'),
+        Parameter('freq_start', 2.65e9, float, 'start frequency of scan'),
+        Parameter('freq_stop', 6.0e7, float, 'end frequency of scan'),
+        Parameter('range_type', 'center_range', ['start_stop', 'center_range'], 'start_stop: freq. range from freq_start to freq_stop. center_range: centered at freq_start and width freq_stop'),
+        Parameter('freq_points', 200, int, 'number of frequencies in scan'),
         Parameter('integration_time', 0.01, float, 'measurement time of fluorescent counts (must be a multiple of settle time)'),
         Parameter('settle_time', .0002, float, 'time wait after changing frequencies using daq (s)'),
         Parameter('mw_generator_switching_time', .01, float, 'time wait after switching center frequencies on generator (s)'),
@@ -282,6 +282,19 @@ class ESR(Script):
         """
         if data is None:
             data = self.data
+
+        plot_esr(axes_list[0], data['frequency'], data['data'], data['fit_params'])
+
+    def _update_plot(self, axes_list):
+        """
+        plotting function for esr
+        Args:
+            axes_list: list of axes objects on which to plot plots the esr on the first axes object
+            data: data (dictionary that contains keys frequency, data and fit_params) if not provided use self.data
+        Returns:
+
+        """
+        data = self.data
 
         plot_esr(axes_list[0], data['frequency'], data['data'], data['fit_params'])
 
